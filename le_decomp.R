@@ -61,7 +61,8 @@ ages <- c(setdiff(unique(lt.dt$age_group_id), c(33, 44, 45, 148)), 235)
 
 # model.dt <- get_model_results(gbd_team = "cod", gbd_id = c.cause, location_id = prov.list, year_id = c(1990, 2016),
 # 					  age_group_id = ages, measure_id = 1)
-# # Get draws of birth defects and population to make rates
+
+# Get draws of birth defects and population to make rates
 c.cause <- meta[cause_name == "Congenital birth defects", cause_id]
 cause.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = c.cause, location_ids = prov.list, year_id = c(1990, 2016),
 					  age_group_id = ages, source = "codcorrect", measure_ids = 1)
@@ -85,23 +86,36 @@ melt.dt <- melt(merge.dt, id.vars = c("year_id", "sex_id", "age_group_id", "loca
 melt.dt[, draw := as.integer(gsub("prop_", "", variable))]
 melt.dt[, variable := NULL]
 
-# Merge on proportions an calculate cause deleted px
+# Merge on proportions and calculate cause deleted px
 lt <- merge(lt.dt, melt.dt, by = c("year_id", "sex_id", "age_group_id", "location_id"))
+lt <- merge(lt, age.table[, .(age_group_id, age_group_years_start)], by = "age_group_id")
+setnames(lt, "age_group_years_start", "age")
 lt[, pxdel := px ^ (1 - mx_prop)]
-lt[age_group_id == max(ages), pxdel := 0]
+lt[age == max(age), pxdel := 0]
 
 # Set first age group lx to 1 and calculate resulting lx
-lt[age_group_id == ages[1], lxdel := lx]
-for(i in 2:length(ages)) {
-	age <- ages[i]
-	prior.age <- ages[i - 1]
-	prior.lx <- lt[age_group_id == prior.age, lxdel]
-	px <- lt[age_group_id == age, pxdel]
+lt[age == 0, lxdel := lx]
+age.list <- sort(unique(lt$age))
+for(i in 2:length(age.list)) {
+	c.age <- age.list[i]
+	prior.age <- age.list[i - 1]
+	prior.lx <- lt[age == prior.age, lxdel]
+	px <- lt[age == prior.age, pxdel]
 	temp.lx <- prior.lx * px
-	lt[age_group_id == age, lxdel := temp.lx]
+	lt[age == c.age, lxdel := temp.lx]
 }
 
 # dx
+lt <- lt[order(ihme_loc_id, year_id, sex_id, draw, age),]
+lt[, lxdel_lead := shift(lxdel, type = "lead"), by = c("sex_id", "location_id", "draw", "year_id")]
+lt[, dxdel := lxdel - lxdel_lead]
+lt[age == max(age), dxdel := lxdel]
+
+# update ax
+
+# nLx
+
+
 
 
 
