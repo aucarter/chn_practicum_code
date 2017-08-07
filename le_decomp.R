@@ -90,7 +90,6 @@ if(plot.e0) {
 lt.dt <- lt.dt[year %in% c(year.start, year.end)]
 setnames(lt.dt, "year", "year_id")
 
-<<<<<<< HEAD
 # Handle the older age groups that aren't reported elsewhere
 
 ages <- c(setdiff(unique(lt.dt$age_group_id), c(33, 44, 45, 148)), 235)

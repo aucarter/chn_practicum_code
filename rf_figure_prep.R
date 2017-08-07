@@ -47,7 +47,9 @@ prov.list <- setdiff(c(loc.table[parent_id == 6, location_id], loc.table[parent_
 remove <- c(361, 354) # HK and Macao
 prov.list <- setdiff(prov.list, remove)
 
-##### SEVs #####
+############################################
+###################### SEVs ################
+############################################
 
 # Get outputs of SEV's for risks of interest (WaSH, malnutrition, HAP, breastfeeding)
 risk_ids <- c(86, 87, 83, 84, 240, 241, 94, 136, 137, 238, 339, 100, 96, 97)
@@ -56,7 +58,7 @@ sev.dt <- get_outputs(topic = "rei", location_id = prov.list, year_id = c(1990,2
 setnames(sev.dt, "val", "sev")
 sev.dt <- merge(sev.dt, sdi.table, by = c("location_id", "year_id"))
 
-## Loop through risks and scatter the sdi
+## Loop through risks and scatter the sdi vs sev
 scatter.path <- paste0(root, "temp/wgodwin/chn/sev_sdi_scatter.pdf")
 pdf(scatter.path)
 for(risk in risk_ids) {
@@ -77,10 +79,46 @@ for(risk in risk_ids) {
 }
 dev.off()
 
+# Get outputs of SEV's for top 6 risks
+risk_ids <- c(86, 87, 335, 334, 100, 240, 136)
+years <- seq(1990, 2016)
+sev.dt <- get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 29, rei_id = risk_ids, metric_id = 3, 
+	age_group_id = 1, version = "latest", sex_id = c(1, 2, 3))
+setnames(sev.dt, "val", "sev")
+sexes <- unique(sev.dt$sex_id)
+
+# loop through locations and scatter sev's over time
+scatter.path <- paste0(root, "temp/wgodwin/chn/sev_time_scatter.pdf")
+pdf(scatter.path)
+legend_title <- "Risk Name"
+for(loc in prov.list) {
+	for(sx in sexes) {
+		temp.dt <- sev.dt[location_id == loc & sex_id == sx,]
+		loc_name <- unique(temp.dt$location_name)
+		sex_name <- unique(temp.dt$sex)
+		gg <- ggplot(temp.dt, 
+			aes(x = year_id, 
+				y = sev, 
+				color = rei_name,
+				group = rei_name)) +
+			geom_line(data = temp.dt[!is.na(temp.dt$sev),]) + 
+			geom_point() + 
+			ggtitle(paste0("Summary Exposure Value-1990 to 2016 in ", loc_name, "-", sex_name)) +
+		    	labs(x = "Year", 
+		    		y = "Summary Exposure Value (proportion exposed)") +
+			scale_color_discrete(legend_title)
+			#facet_wrap(~location_name, ncol = 2, nrow = 2)
+		print(gg)
+		print(paste(loc, sex_name))
+	}
+}
+dev.off()
+
+#################################################
 ##### Cause-specific Attributable mortality #####
+#################################################
 
 # Get outputs of mortality rate due to risks of interest
-risk_ids <- c(86, 87, 83, 84, 240, 241, 94, 136, 137, 238, 339, 100, 96, 97)
 risk_ids <- c(86, 87, 339, 100, 240, 136)
 years <- seq(1990, 2016)
 mort.dt <-	get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 1, rei_id = risk_ids, metric_id = 3, 
@@ -111,7 +149,9 @@ for(loc in prov.list) {
 }
 dev.off()
 
+################################################
 ########## All-cause mortality burden ##########
+################################################
 
 #Death rate attributed to all risk factors
 all.mr <- get_outputs(topic = "rei", location_id = prov.list, year_id = c(1990, 1995, 2000, 2005, 2010, 2016), measure_id = 1, metric_id = 3, 
@@ -119,13 +159,4 @@ all.mr <- get_outputs(topic = "rei", location_id = prov.list, year_id = c(1990, 
 all.mr[, rate := val * 100000]
 all.mr <- merge(all.mr, loc.table, by="location_id")
 
-# Produce map of china with indicators previously specified 
-years <- c(1990, 1995, 2000, 2005, 2010, 2016)
-#years <- 2016
-out.path <- paste0(root, "/temp/wgodwin/chn/death_map.pdf")
-limits <- seq(0, 1650, by=150)
-labels <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11")
-global_map(data=all.mr, map.var="rate", plot.title="Attributable Mortality Rate Due to All Risk Factors", 
-           output.path=out.path, years=years, ages = 1, sexes=3, subnat=TRUE, 
-           col.rev=T, limits = limits, labels = labels, col="easter_to_earth")
 
