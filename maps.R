@@ -13,6 +13,7 @@ rm(list=ls())
 library(foreign); library(plyr); library(data.table); library(lattice); library(latticeExtra); library(RColorBrewer);library(ggplot2)
 library(maptools) ; library(RMySQL)
 root <- ifelse(Sys.info()[1]=="Windows","J:","/home/j")
+user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 
 # read in shape files 
 provinces <- readShapeSpatial(paste0(root, "/DATA/SHAPE_FILES/GBD_geographies/selected_subnationals/CHN/ADM1/GIS/CHN_adm1.shp"))
@@ -47,7 +48,7 @@ rbPal <- colorRampPalette(c("dark green", "yellow","red"))
 colors <- rbPal(5)
 
 # actually plot
-pdf(paste0(root, "/temp/aucarter/le_decomp/China_LE_diff_maps.pdf",sep=""),width=12,height=8)
+pdf(paste0(root, "/temp/", user, "/China_maps.pdf",sep=""),width=12,height=8)
 
 ### loop through the years
 
