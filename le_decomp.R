@@ -63,6 +63,7 @@ ages <- c(setdiff(unique(lt.dt$age_group_id), c(33, 44, 45, 148)), 235)
 # 					  age_group_id = ages, measure_id = 1)
 # # Get draws of birth defects and population to make rates
 c.cause <- meta[cause_name == "Congenital birth defects", cause_id]
+c.cause <- meta[cause_name == "Alzheimer disease and other dementias", cause_id]
 cause.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = c.cause, location_ids = prov.list, year_id = c(1990, 2016),
 					  age_group_id = ages, source = "codcorrect", measure_ids = 1)
 pop.dt <- get_population(location_id = prov.list, year_id = c(1990, 2016), age_group_id = ages, sex_id = -1)
