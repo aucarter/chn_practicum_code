@@ -46,7 +46,7 @@ lifetable_decomp <- function(data) {
   
   # bring in ax from thelife table 
   
-    ax<- as.data.frame(fread("J:/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/result/compiled_summary_lt.csv"))
+    ax<- as.data.frame(fread("/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/compiled_summary_lt.csv"))
     ax <- ax[,c("ihme_loc_id", "sex_id", "year", "age_group_id", "ax")]
     ax <- ax[ax$year %in% c(starty, endy),]
     locs <- unique(data$ihme_loc_id)
