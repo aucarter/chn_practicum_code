@@ -27,6 +27,8 @@ library(data.table)
 # }
 region.lt <- T
 le.decomp <- T
+bd.prop <- T
+combine <- T
 
 ### Paths
 
@@ -70,6 +72,18 @@ if(le.decomp)
 		print(le.string)
 		system(le.string)
 	}
+}
+
+## Birth Defect Proportions
+if(bd.prop) {
+	bd.string <- paste0("qsub -pe multi_slot 10 ",
+						"-e /share/temp/sgeoutput/", user, "/errors ",
+						"-o /share/temp/sgeoutput/", user, "/output ",
+						"-N prep_data ", 
+						shell.dir, "shell_R.sh ", 
+						code.dir, "bd_prop.R")
+	print(bd.string)
+	system(bd.string)	
 }
 
 ## Combine Files

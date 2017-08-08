@@ -26,18 +26,24 @@ if(length(args) > 0) {
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
 years <- c(1996, 2006, 2016)
-plot.e0 <- F
 table.e0 <- T
-plot.mx <- F
+table.bd.count <- T
+table.mx <- F
 plot.props <- T
 ncores <- 4
 
 ### Paths
 lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/"
+
+# Tables
 table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 dir.create(table.dir, showWarnings = F)
 e0.table.dir <- paste0(table.dir, "e0/")
 dir.create(e0.table.dir, showWarnings = F)
+bd.count.table.dir <- paste0(table.dir, "bd_dist/")
+dir.create(bd.count.table.dir, showWarnings = F)
+
+# Plots
 plot.dir <- paste0(root, "temp/aucarter/le_decomp/")
 dir.create(plot.dir, showWarnings = F)
 e0.plot.path <- paste0(plot.dir, "e0_plots.pdf")
@@ -76,21 +82,23 @@ loc.table <- get_location_metadata(location_set_id = 22)
 age.table <- data.table(get_age_map(type = "all"))
 meta <- get_cause_metadata(cause_set_id = 2, gbd_round_id = 4)
 regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
-sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "Both"))
+sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "All"))
 
 ### Code
 loc.id <- loc.table[ihme_loc_id == loc, location_id]
+loc.name <- loc.table[ihme_loc_id == loc, location_name]
 
 # Life-tables for each sex in years of analysis
 lt.dt <- fread(paste0(lt.dir, "lt_", loc.id, ".csv"))[year_id %in% years]
 
 # Write life expectancy at birth
 if(table.e0) {
-	e0.dt <- merge(lt.dt[age_group_id == 28 & year_id %in% years, .(year_id, ex, sex_id, location_id)],
+	e0.dt <- merge(lt.dt[age_group_id == 28 & year_id %in% years, .(year_id, ex, sex_id, location_id, draw)],
 			       loc.table[, .(location_id, location_name)], by = "location_id")
-	setnames(e0.dt, c("year_id", "ex"), c("year", "e0"))
+	e0.dt <- summarize.draws(e0.dt, value.vars = "ex", id.vars = c("location_name", "year_id", "sex_id"))
+	setnames(e0.dt, c("year_id"), c("year"))
 	e0.dt <- merge(e0.dt, sex.table, by = "sex_id")
-	e0.dt <- e0.dt[, .(location_name, year, sex, e0)]
+	e0.dt <- e0.dt[order(location_name, year, sex), .(location_name, year, sex, ex_mean, ex_lower, ex_upper)]
 	write.csv(e0.dt, paste0(e0.table.dir, loc, ".csv"), row.names = F)
 }
 
@@ -109,7 +117,7 @@ cause.dt <- rbindlist(lapply(c.causes, function(cause) {
 	temp.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = cause, location_ids = loc.id, year_id = years,
 					  source = "codcorrect", measure_ids = 1, sex_id = 1:3)
 }))
-cause.dt[, c("measure_id", "output_version_id", "location_id") := NULL]
+cause.dt[, c("measure_id", "output_version_id", "location_id", "metric_id") := NULL]
 melt.cause <- melt(cause.dt, id.vars = c("year_id", "sex_id", "age_group_id", "cause_id"))
 cast.cause <- dcast(melt.cause, year_id + sex_id + age_group_id + variable ~ cause_id)
 setnames(cast.cause, paste0(c.causes), names(c.causes))
