@@ -17,24 +17,27 @@ user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 library(data.table); library(ggplot2);library(parallel)
 
 ## Arguments
-# args <- commandArgs(trailingOnly = TRUE)
-# if(length(args) > 0) {
-
-# } else {
-
-# }
+args <- commandArgs(trailingOnly = TRUE)
+if(length(args) > 0) {
+	loc <- args[1]
+} else {	
+	loc <- "CHN_491"
+}
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
-year.start <- 1990
-year.end <- 2016
+years <- c(1996, 2006, 2016)
 plot.e0 <- F
 table.e0 <- T
 plot.mx <- F
 plot.props <- T
-ncores <- 10
+ncores <- 4
 
 ### Paths
-lt.path <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/compiled_summary_lt.csv"
+lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/"
+table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
+dir.create(table.dir, showWarnings = F)
+e0.table.dir <- paste0(table.dir, "e0/")
+dir.create(e0.table.dir, showWarnings = F)
 plot.dir <- paste0(root, "temp/aucarter/le_decomp/")
 dir.create(plot.dir, showWarnings = F)
 e0.plot.path <- paste0(plot.dir, "e0_plots.pdf")
@@ -43,6 +46,7 @@ prop.plot.path <- paste0(plot.dir, "le_prop_plot.pdf")
 
 ### Functions
 source(paste0(root, "temp/central_comp/libraries/current/r/get_location_metadata.R"))
+source(paste0(root, "temp/central_comp/libraries/current/r/get_life_table.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_best_model_versions.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_draws.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_model_results.R"))
@@ -58,77 +62,62 @@ matrix.div <- function(data, num, denom) {
 	return(out.dt)
 }
 
+my.summary <- function(value.var) {
+	list(mean = mean(value.var), lower=quantile(value.var, 0.025, names=F), upper=quantile(value.var, 0.975, names=F))
+}
+ 
+summarize.draws <- function(dt, value.vars, id.vars) {
+	summary.dt <- dt[, as.list(unlist(lapply(.SD, my.summary))), by=id.vars, .SDcols=value.vars]
+	setnames(summary.dt, names(summary.dt), gsub("\\.", "_", names(summary.dt), fixed=F))
+}
+
 ### Tables
 loc.table <- get_location_metadata(location_set_id = 22)
 age.table <- data.table(get_age_map(type = "all"))
 meta <- get_cause_metadata(cause_set_id = 2, gbd_round_id = 4)
-
 regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
+sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "Both"))
 
 ### Code
-# Get Chinese provinces excluding Hong Kong and Macao
-prov.list <- loc.table[parent_id == 44533, location_id]
+loc.id <- loc.table[ihme_loc_id == loc, location_id]
 
-# Life-tables for provinces for each sex in years of analysis
-# lt.dt <- fread(lt.path)[location_id %in% c(prov.list, 6)]
-lt.dt <- rbindlist(mclapply(c(prov.list, 6), function(loc.id) {
-	dt <- fread(paste0("/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/lt_", loc.id, ".csv"))
-}, mc.cores = ncores))
+# Life-tables for each sex in years of analysis
+lt.dt <- fread(paste0(lt.dir, "lt_", loc.id, ".csv"))[year_id %in% years]
+
+# Write life expectancy at birth
+if(table.e0) {
+	e0.dt <- merge(lt.dt[age_group_id == 28 & year_id %in% years, .(year_id, ex, sex_id, location_id)],
+			       loc.table[, .(location_id, location_name)], by = "location_id")
+	setnames(e0.dt, c("year_id", "ex"), c("year", "e0"))
+	e0.dt <- merge(e0.dt, sex.table, by = "sex_id")
+	e0.dt <- e0.dt[, .(location_name, year, sex, e0)]
+	write.csv(e0.dt, paste0(e0.table.dir, loc, ".csv"), row.names = F)
+}
+
 # Set last age group n to 5
 lt.dt[age_group_id == max(age_group_id), n := 5]
-# Life expectancy plots
-if(plot.e0) {
-	pdf(e0.plot.path, width = 11, height = 8.5)
-	e0.plot.dt <- merge(lt.dt[age_group_id== 28 & sex_id %in% 1:2, .(year, ex, sex_id, ihme_loc_id)], 
-						loc.table[, .(ihme_loc_id, location_name)], by = "ihme_loc_id")
-	for(csex in 1:2){
-		e0.plot.sex <- e0.plot.dt[sex_id == csex]
-		sex.name <- ifelse(csex == 1, "Male", "Female")
-		gg <- ggplot(e0.plot.sex[year >= 1990]) + geom_line(aes(x = year, y = ex, color = location_name)) +
-			  ggtitle(paste0(sex.name, " Provincial Life-Expectancy")) + theme(legend.position = "bottom") +
-			  ylab("Life-Expectancy") + xlab("Year") + guides(color=guide_legend(title="Province"))
-		print(gg)
-	}
-	dev.off()
-}
-
-# Life expectancy table
-if(table.e0) {
-	e0.years <- c(1996, 2006, 2016)
-	e0.prov <- merge(lt.dt[age_group_id == 28 & year %in% e0.years, .(year, ex, Tx, lx, sex_id, ihme_loc_id)],
-			       loc.table[, .(ihme_loc_id, location_name)], by = "ihme_loc_id")
-	e0.prov <- merge(e0.prov, region.locs[, .(location_name, region_name)], by = "location_name")
-	e0.region <- e0.prov[, lapply(.SD, sum), by = .(region_name, sex_id, year), .SDcols = c("Tx", "lx")]
-	e0.region[, ex := Tx / lx]
-	e0.region[, location_name := region_name]
-	e0.nat <- e0.prov[, lapply(.SD, sum), by = .(sex_id, year), .SDcols = c("Tx", "lx")]
-	e0.nat[, ex := Tx / lx]
-	e0.nat[, location_name := "China"]
-	e0.dt <- rbindlist(list(e0.prov, e0.region, e0.nat), use.names = T, fill = T)
-}
 
 # Set radix to 1 instead of 100,000 and adjust and nLx deaths accordingly 
-lt.dt[, c("lx", "dx", "nLx") := .(lx / 100000, dx / 100000, nLx / 100000)]
-lt.dt <- lt.dt[year %in% c(year.start, year.end)]
-setnames(lt.dt, "year", "year_id")
+lt.dt[, c("lx", "dx", "nLx", "Tx") := .(lx / 1e5, dx / 1e5, nLx / 1e5, Tx / 1e5)]
+lt.dt <- lt.dt[year_id %in% years]
 
 ## Get draws of birth defects and all cause to make proportions
 c.causes <- sapply(cause.names, function(cause) {
 	meta[cause_name == cause, cause_id]
 })
 cause.dt <- rbindlist(lapply(c.causes, function(cause) {
-	temp.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = cause, location_ids = prov.list, year_id = c(year.start, year.end),
-					  source = "codcorrect", measure_ids = 1)
+	temp.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = cause, location_ids = loc.id, year_id = years,
+					  source = "codcorrect", measure_ids = 1, sex_id = 1:3)
 }))
-cause.dt[, c("measure_id", "output_version_id") := NULL]
-melt.cause <- melt(cause.dt, id.vars = c("location_id", "year_id", "sex_id", "age_group_id", "cause_id"))
-cast.cause <- dcast(melt.cause, location_id + year_id + sex_id + age_group_id + variable ~ cause_id)
+cause.dt[, c("measure_id", "output_version_id", "location_id") := NULL]
+melt.cause <- melt(cause.dt, id.vars = c("year_id", "sex_id", "age_group_id", "cause_id"))
+cast.cause <- dcast(melt.cause, year_id + sex_id + age_group_id + variable ~ cause_id)
 setnames(cast.cause, paste0(c.causes), names(c.causes))
 cast.cause[, draw := as.integer(gsub("draw_", "", variable))]
 cast.cause[, variable := NULL]
 # Collapse under-1
 cast.cause[age_group_id %in% 2:4, age_group_id := 28]
-cast.cause <- cast.cause[, lapply(.SD, sum), by = c("year_id", "sex_id", "age_group_id", "location_id", "draw")]
+cast.cause <- cast.cause[, lapply(.SD, sum), by = c("year_id", "sex_id", "age_group_id", "draw")]
 # Calculate prop
 cast.cause[, mx_prop := get(names(c.causes)[1]) / get(names(c.causes)[2])]
 cast.cause[is.na(mx_prop), mx_prop := 0]
@@ -144,30 +133,11 @@ fill.dt <- rbindlist(lapply(fill.ages, function(age) {
 }))
 cast.cause <- rbind(cast.cause, fill.dt)
 
-# Read in population for weighting in regional aggretation of LT
-pop.dt <- get_population(location_id = prov.list, year_id = c(year.start, year.end), age_group_id = -1, sex_id = -1)
-
 # Merge with life table
-lt <- merge(lt.dt, cast.cause, by = c("year_id", "sex_id", "age_group_id", "location_id"))
+lt <- merge(lt.dt, cast.cause, by = c("year_id", "sex_id", "age_group_id", "draw"))
 lt <- merge(lt, age.table[, .(age_group_id, age_group_years_start)], by = "age_group_id")
 setnames(lt, "age_group_years_start", "age")
-lt <- lt[order(ihme_loc_id, year_id, sex_id, draw, age),]
-
-# Plot birth-defect mx
-if(plot.mx) {
-	pdf(mx.plot.path, width = 11, height = 8.5)
-	mx.plot.dt <- merge(lt[year_id == 1990 & sex_id %in% 1:2 & draw == 0, .(year_id, mx_prop, sex_id, ihme_loc_id, age)], 
-						loc.table[, .(ihme_loc_id, location_name)], by = "ihme_loc_id")
-	for(csex in 1:2){
-		mx.plot.sex <- mx.plot.dt[sex_id == csex]
-		sex.name <- ifelse(csex == 1, "Male", "Female")
-		gg <- ggplot(mx.plot.sex) + geom_line(aes(x = age, y = mx_prop, color = location_name)) +
-			  ggtitle(paste0(sex.name, " Provincial Birth Defect Mortality Proportions")) + theme(legend.position = "bottom") +
-			  ylab("Mortality Proportion") + xlab("Age") + guides(color=guide_legend(title="Province"))
-		print(gg)
-	}
-	dev.off()	
-}
+lt <- lt[order(year_id, sex_id, draw, age),]
 
 ## Calculate cause deleted life table
 # px
@@ -200,14 +170,39 @@ lt[age %in% ax.ages, axdel := n + (1 - mx_prop) * ((1 - px) / (1 - pxdel)) * (ax
 lt[, nLxdel := n * lxdel_lead + axdel * dxdel]
 lt[age == max(age), nLxdel := (ex / (1 - mx_prop)) * lxdel]
 
+# Tx
+lt[, Txdel := rev(cumsum(rev(nLx))), by = c("sex_id", "draw", "year_id")]
+
+# ex
+lt[, exdel := Txdel / lxdel]
+
 # Decompose
 lt[, nLxcause := ifelse(nLxdel == 0, 0, (nLx / nLxdel) * n)]
 cast.lt <- dcast(lt, age + sex_id + location_id + draw + n ~ year_id, value.var = c("nLxcause", "nLxdel"))
-cast.lt[, decomp := (get(paste0("nLxcause_", year.end)) - get(paste0("nLxcause_", year.start))) * ((get(paste0("nLxdel_", year.end)) + get(paste0("nLxdel_", year.start))) / (2 * n)) ]
-collapse.decomp <- cast.lt[, .(total_decomp = sum(decomp)), by = .(sex_id, location_id, draw)]
+decomp.cols <- c()
+for (y1 in years) {
+	for (y2 in years[-1]) {
+	    year.start <- y1
+	    if (y1 >= y2) {
+	    	next
+	    } else {
+	    	year.end <- y2
+	    }
+		cast.lt[, (paste0("decomp_", year.start, "_", year.end)) := (get(paste0("nLxcause_", year.end)) - get(paste0("nLxcause_", year.start))) * ((get(paste0("nLxdel_", year.end)) + get(paste0("nLxdel_", year.start))) / (2 * n)) ]
+		decomp.cols <- c(decomp.cols, paste0("decomp_", year.start, "_", year.end))
+	}
+}
+
+collapsed.decomp <- cast.lt[, lapply(.SD, sum), by = .(sex_id, draw), .SDcols = decomp.cols]
+summary.decomp <- summarize.draws(collapsed.decomp, value.vars = decomp.cols, id.vars = "sex_id")
+melt.summary <- melt(summary.decomp, id.vars = "sex_id")
+melt.summary[, year1 := as.integer(tstrsplit(as.character(variable), "_")[[2]])]
+melt.summary[, year2 := as.integer(tstrsplit(as.character(variable), "_")[[3]])]
+melt.summary[, stat := tstrsplit(as.character(variable), "_")[[4]]]
+cast.summary <- dcast(melt.summary, sex_id + year1 + year2 ~ stat, value.var = "value")
 
 # LE diff
-diff.dt <- lt.dt[age_group_id == 28 & sex_id %in% 1:2 & year_id %in% c(year.start, year.end), .(year_id, ex, sex_id, location_id)]
+diff.dt <- lt.dt[age_group_id == 28 & sex_id %in% 1:2 & year_id %in% years, .(year_id, ex, sex_id, location_id)]
 cast.diff <- dcast(diff.dt, sex_id + location_id ~ year_id, value.var = "ex")
 cast.diff[, diff := get(as.character(year.end)) - get(as.character(year.start))]
 write.csv(cast.diff, "/home/j/temp/aucarter/le_decomp/le_diff.csv", row.names = F)
