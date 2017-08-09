@@ -26,9 +26,8 @@ if(length(args) > 0) {
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
 years <- c(1996, 2006, 2016)
-table.e0 <- T
-table.bd.count <- T
-table.mx <- F
+table.e0 <- F
+table.decomp <- T
 plot.props <- T
 ncores <- 4
 
@@ -40,8 +39,8 @@ table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 dir.create(table.dir, showWarnings = F)
 e0.table.dir <- paste0(table.dir, "e0/")
 dir.create(e0.table.dir, showWarnings = F)
-bd.count.table.dir <- paste0(table.dir, "bd_dist/")
-dir.create(bd.count.table.dir, showWarnings = F)
+decomp.table.dir <- paste0(table.dir, "decomp/")
+dir.create(decomp.table.dir, showWarnings = F)
 
 # Plots
 plot.dir <- paste0(root, "temp/aucarter/le_decomp/")
@@ -226,15 +225,5 @@ summary.decomp <- merge.decomp[, .(mean = mean(pct), lower = quantile(pct, 0.025
 summary.decomp[, Sex := ifelse(sex_id == 1, "Male", "Female")]
 summary.decomp <- merge(summary.decomp, loc.table[,.(location_id, location_name)], by = "location_id")
 
-# Plot proportion of life expectancy improvement from birth defects
-if(plot.props) {
-	pdf(prop.plot.path, width = 11, height = 8.5)	
-	gg <- ggplot(summary.decomp) + geom_bar(aes(x = location_name, y = mean, fill = Sex), position = "dodge", stat = "identity") +
-		  geom_errorbar(aes(x = location_name, ymin = lower, ymax = upper, group = Sex), position = position_dodge(0.9), width = 0.5) +
-		  ggtitle("Proportion of Life Expectancy Gains Due to Improvement in Birth Defects Mortality") + 
-		  theme(legend.position = "bottom") + ylab("Life Expectancy Proportion (Percent)") + xlab("Province") +
-		  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))		  
-		  print(gg)
-	dev.off()		
-}
+
 ### End
