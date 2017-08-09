@@ -38,9 +38,11 @@ source(paste0(root, "temp/central_comp/libraries/current/r/get_location_metadata
 source(paste0(root, "temp/central_comp/libraries/current/r/get_life_table.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_draws.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_population.R"))
+source(paste0(root,"/Project/Mortality/shared/functions/get_age_map.r"))
 
 ### Tables
 loc.table <- get_location_metadata(location_set_id = 22)
+age.table <- data.table(get_age_map(type = "all"))
 regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
 
 ### Code
@@ -89,6 +91,12 @@ region.dt[age_group_id == 148, qx := 1]
 # px
 region.dt[, px := 1 - qx]
 
+# Add in actaul ages for sorting
+region.dt <- merge(region.dt, age.table[, .(age_group_id, age_group_years_start)], by = "age_group_id")
+
+region.dt <- region.dt[order(year_id, sex_id, age_group_years_start)]
+region.dt[, age_group_years_start := NULL]
+
 # lx
 region.dt[age_group_id == 28, lx := 100000]
 age.list <- c(28, setdiff(unique(region.dt$age_group_id), 28))
@@ -121,6 +129,6 @@ loc.id <- regions[ihme_loc_id == loc, location_id]
 region.dt[, location_id := loc.id]
 
 ## Write
-write.csv(region.dt, paste0(out.dir, loc, "_lt.csv"), row.names = F)
+write.csv(region.dt, paste0(out.dir, "lt_", loc.id, ".csv"), row.names = F)
 
 ### End

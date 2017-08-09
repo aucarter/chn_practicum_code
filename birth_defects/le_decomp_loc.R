@@ -21,7 +21,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	loc <- args[1]
 } else {	
-	loc <- "CHN_491"
+	loc <- "CHN_44534"
 }
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
@@ -29,7 +29,7 @@ years <- c(1996, 2006, 2016)
 table.e0 <- F
 table.decomp <- T
 plot.props <- T
-ncores <- 4
+ncores <- 10
 
 ### Paths
 lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/"
@@ -51,12 +51,8 @@ prop.plot.path <- paste0(plot.dir, "le_prop_plot.pdf")
 
 ### Functions
 source(paste0(root, "temp/central_comp/libraries/current/r/get_location_metadata.R"))
-source(paste0(root, "temp/central_comp/libraries/current/r/get_life_table.R"))
-source(paste0(root, "temp/central_comp/libraries/current/r/get_best_model_versions.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_draws.R"))
-source(paste0(root, "temp/central_comp/libraries/current/r/get_model_results.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_cause_metadata.R"))
-source(paste0(root, "temp/central_comp/libraries/current/r/get_population.R"))
 source(paste0(root,"/Project/Mortality/shared/functions/get_age_map.r"))
 
 matrix.div <- function(data, num, denom) {
@@ -84,6 +80,11 @@ regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
 sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "All"))
 
 ### Code
+region <- regions[ihme_loc_id == loc, region]
+if(region) {
+	lt.dir <- paste0(root, "temp/aucarter/le_decomp/region_lts/")
+	loc.table <- regions
+}
 loc.id <- loc.table[ihme_loc_id == loc, location_id]
 loc.name <- loc.table[ihme_loc_id == loc, location_name]
 
@@ -109,6 +110,9 @@ lt.dt[, c("lx", "dx", "nLx", "Tx") := .(lx / 1e5, dx / 1e5, nLx / 1e5, Tx / 1e5)
 lt.dt <- lt.dt[year_id %in% years]
 
 ## Get draws of birth defects and all cause to make proportions
+if(region) {
+	loc.id <- loc.table[region_name == loc.name, location_id]
+}
 c.causes <- sapply(cause.names, function(cause) {
 	meta[cause_name == cause, cause_id]
 })
@@ -117,6 +121,9 @@ cause.dt <- rbindlist(lapply(c.causes, function(cause) {
 					  source = "codcorrect", measure_ids = 1, sex_id = 1:3)
 }))
 cause.dt[, c("measure_id", "output_version_id", "location_id", "metric_id") := NULL]
+if(region) {
+	cause.dt <- cause.dt[, lapply(.SD, sum), by = .(year_id, sex_id, age_group_id, cause_id)]
+}
 melt.cause <- melt(cause.dt, id.vars = c("year_id", "sex_id", "age_group_id", "cause_id"))
 cast.cause <- dcast(melt.cause, year_id + sex_id + age_group_id + variable ~ cause_id)
 setnames(cast.cause, paste0(c.causes), names(c.causes))
