@@ -60,12 +60,12 @@ cod.mr <- get_outputs(topic="cause", location_id=prov.list, year_id=years, age_g
 cod.mr[, rate := val * 100000]
 
 # Get cause_ids for selected causes
-cause_id_sub <- cod.mr[grepl("encephalopathy|Lower|complications|Congenital heart|Drowning|Other neonatal|
-    |Pedestrian|Unintentional suffocation|Digestive congenital|Other congenital|Neonatal sepsis|
-    |Diarrheal disease|Whooping|Neural tube|Protein-energy",
-    cod.mr$cause_name), ]
+# cause_id_sub <- cod.mr[grepl("encephalopathy|Lower|complications|Congenital heart|Drowning|Other neonatal|
+#     |Pedestrian|Unintentional suffocation|Digestive congenital|Other congenital|Neonatal sepsis|
+#     |Diarrheal disease|Whooping|Neural tube|Protein-energy",
+#     cod.mr$cause_name), ]
 
-#cause_id_sub <- cod.mr[grepl("encephalopathy|Lower", cod.mr$cause_name), ]
+cause_id_sub <- cod.mr[grepl("encephalopathy|Lower", cod.mr$cause_name), ]
 
 # Subset COD estimates to get selected causes
 cod.mr <- cod.mr[which(cod.mr$cause_id %in% cause_id_sub$cause_id)]
@@ -89,7 +89,7 @@ colors <- rbPal(5)
 causes <- unique(cod.mr$cause_name)
 
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps.pdf",sep=""),width=9,height=6)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps.pdf",sep=""),width=7.5,height=5)
 
 ### Loop through years
 for(cause in causes) {

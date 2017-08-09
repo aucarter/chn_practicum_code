@@ -4,7 +4,8 @@ user <- Sys.info()["user"]
 code.dir <- paste0("/homes/", user, "/chn_practicum_code/")
 n.slots <- 5
 
-cause.list <- c(302,322,339,381,382,383,385,387,642,643,651,652,690,698,706)
+#cause.list <- c(302,322,339,381,382,383,385,387,642,643,651,652,690,698,706)
+cause.list <- c(322, 382)
 n.jobs <- 0
 for (cause in cause.list) {
 	code.string <- paste0("qsub -pe multi_slot ", n.slots, " ",
