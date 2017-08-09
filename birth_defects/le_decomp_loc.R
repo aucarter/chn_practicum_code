@@ -231,6 +231,6 @@ if(table.deleted) {
 	setnames(e0.del.dt, c("year_id"), c("year"))
 	e0.del.dt <- merge(e0.del.dt, sex.table, by = "sex_id")
 	e0.del.dt <- e0.del.dt[order(location_name, year, sex), .(location_name, year, sex, exdel_mean, exdel_lower, exdel_upper)]
-	write.csv(e0.del.dt, paste0(e0.table.dir, loc, ".csv"), row.names = F)	
+	write.csv(e0.del.dt, paste0(deleted.table.dir, loc, ".csv"), row.names = F)	
 }
 ### End
