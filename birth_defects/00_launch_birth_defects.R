@@ -12,6 +12,7 @@ rm(list=ls())
 windows <- Sys.info()[1]=="Windows"
 root <- ifelse(windows,"J:/","/home/j/")
 user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
+hiv.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/HIV/")
 shell.dir <- paste0(ifelse(windows, "H:", paste0("/homes/", user)), "/chn_practicum_code/")
 code.dir <- paste0(shell.dir, "birth_defects/")
 
@@ -33,7 +34,7 @@ combine <- T
 ### Paths
 
 ### Functions
-source(paste0(code.dir, "shared_functions/get_locations.R"))
+source(paste0(hiv.dir, "shared_functions/get_locations.R"))
 
 ### Tables
 loc.table <- get_locations()
@@ -45,12 +46,12 @@ region.list <- regions[region == 1, ihme_loc_id]
 loc.list <- c(prov.list, region.list, "CHN")
 
 ## Regional Life Tables
-if(region.lt)
+if(region.lt) {
 	for(region in region.list) {
 		region.string <- paste0("qsub -pe multi_slot 10 ",
 							"-e /share/temp/sgeoutput/", user, "/errors ",
 							"-o /share/temp/sgeoutput/", user, "/output ",
-							"-N prep_data ", 
+							"-N ", region, "_region_lt ", 
 							shell.dir, "shell_R.sh ", 
 							code.dir, "region_lt.R ", 
 							region)
@@ -60,12 +61,12 @@ if(region.lt)
 }
 
 ## Life Expectancy Decomposition
-if(le.decomp)
+if(le.decomp) {
 	for (loc in prov.list) {
 		le.string <- paste0("qsub -pe multi_slot 10 ",
 							"-e /share/temp/sgeoutput/", user, "/errors ",
 							"-o /share/temp/sgeoutput/", user, "/output ",
-							"-N prep_data ", 
+							"-N le_decomp ", 
 							shell.dir, "shell_R.sh ", 
 							code.dir, "le_decomp_loc.R ", 
 							loc)
@@ -79,7 +80,7 @@ if(bd.prop) {
 	bd.string <- paste0("qsub -pe multi_slot 10 ",
 						"-e /share/temp/sgeoutput/", user, "/errors ",
 						"-o /share/temp/sgeoutput/", user, "/output ",
-						"-N prep_data ", 
+						"-N bd_prop ", 
 						shell.dir, "shell_R.sh ", 
 						code.dir, "bd_prop.R")
 	print(bd.string)
@@ -91,9 +92,9 @@ if(combine) {
 	combine.string <- paste0("qsub -pe multi_slot 10 ",
 						"-e /share/temp/sgeoutput/", user, "/errors ",
 						"-o /share/temp/sgeoutput/", user, "/output ",
-						"-N prep_data ", 
+						"-N combine ", 
 						shell.dir, "shell_R.sh ", 
-						code.dir, "le_decomp.R")
+						code.dir, "combine_files.R")
 	print(combine.string)
 	system(combine.string)
 }
