@@ -51,7 +51,7 @@ if(region.lt) {
 		region.string <- paste0("qsub -pe multi_slot 10 ",
 							"-e /share/temp/sgeoutput/", user, "/errors ",
 							"-o /share/temp/sgeoutput/", user, "/output ",
-							"-N region_lt ", 
+							"-N ", region, "_region_lt ", 
 							shell.dir, "shell_R.sh ", 
 							code.dir, "region_lt.R ", 
 							region)

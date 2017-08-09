@@ -100,12 +100,12 @@ for(i in 2:length(age.list)) {
 	temp.lx <- prior.lx * px
 	region.dt[age_group_id == c.age, lx := temp.lx]
 }
-region.dt[, lx_lead := NULL]
 
 # dx
 region.dt[, lx_lead := shift(lx, type = "lead"), by = c("sex_id", "draw", "year_id")]
 region.dt[, dx := lx - lx_lead]
 region.dt[age_group_id == max(age_group_id), dx := lx]
+region.dt[, lx_lead := NULL]
 
 # nLx
 region.dt[, nLx := n * lx_lead + ax * dx]
