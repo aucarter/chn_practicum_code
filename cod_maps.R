@@ -28,9 +28,9 @@ user <- ifelse(windows, Sys.getenv("USERNAME"), Sys.getenv("USER"))
 # Arguments
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
-    loc <- args[1]
+    cause <- args[1]
 } else {
-    loc <- "GHA"
+    cause <- 302
 }
 
 # Source in functions
@@ -54,8 +54,7 @@ setnames(locations, "prov.list", "location_id")
 
 # Pull burden data
 years <- c(1990, 1995, 2000, 2005, 2010, 2016)
-causes <- unique(cod.mr$cause_name)
-cod.mr <- get_outputs("cause", location_id=prov.list, year_id=years, age_group_id=1, sex_id="all", measure_id=1,
+cod.mr <- get_outputs(topic="cause", location_id=prov.list, year_id=years, age_group_id=1, sex_id="all", measure_id=1,
     metric_id=3, cause_id="lvl4", version="latest")
 
 cod.mr[, rate := val * 100000]
@@ -66,7 +65,7 @@ cause_id_sub <- cod.mr[grepl("encephalopathy|Lower|complications|Congenital hear
     |Diarrheal disease|Whooping|Neural tube|Protein-energy",
     cod.mr$cause_name), ]
 
-#cause_id_sub <- cod.mr[grepl("encephalopathy", cod.mr$cause_name), ]
+#cause_id_sub <- cod.mr[grepl("encephalopathy|Lower", cod.mr$cause_name), ]
 
 # Subset COD estimates to get selected causes
 cod.mr <- cod.mr[which(cod.mr$cause_id %in% cause_id_sub$cause_id)]
@@ -86,19 +85,22 @@ data <- merge(provinces, cod.mr, by=c("id"), all.x=T)
 rbPal <- colorRampPalette(c("dark green", "yellow","red"))
 colors <- rbPal(5)
 
-# Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps.pdf",sep=""),width=12,height=8)
+# Set desired causes
+causes <- unique(cod.mr$cause_name)
 
-### Loop through causes and years
+# Actually plot
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps.pdf",sep=""),width=9,height=6)
+
+### Loop through years
 for(cause in causes) {
     for(year in years) {
-        for(sex in 1:3){
+        for(sex in 1:3) {
             data_temp <- data[data$sex_id == sex & data$year_id == year,]
             sex.name <- ifelse(sex==1, "Males", ifelse(sex==2, "Females", "Both"))
             ylim <- range(data_temp$val, na.rm=TRUE)
             # Order the variables to make sure the graphing doesn't get messed up
             data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
-            title = paste("Deaths due to", cause, "in", year, "for Children Under 5,", 
+            title = paste("Mortality due to", cause, "in", year, "for Children Under 5,", 
                           sex.name, sep=" ")
             
             print(ggplot(data_temp) +
