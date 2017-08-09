@@ -26,9 +26,9 @@ if(length(args) > 0) {
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
 years <- c(1996, 2006, 2016)
-table.e0 <- F
+table.e0 <- T
 table.decomp <- T
-plot.props <- T
+table.deleted <- T
 ncores <- 10
 
 ### Paths
@@ -41,6 +41,8 @@ e0.table.dir <- paste0(table.dir, "e0/")
 dir.create(e0.table.dir, showWarnings = F)
 decomp.table.dir <- paste0(table.dir, "decomp/")
 dir.create(decomp.table.dir, showWarnings = F)
+deleted.table.dir <- paste0(table.dir, "deleted/")
+dir.create(deleted.table.dir, showWarnings = F)
 
 # Plots
 plot.dir <- paste0(root, "temp/aucarter/le_decomp/")
@@ -190,47 +192,45 @@ lt[, Txdel := rev(cumsum(rev(nLx))), by = c("sex_id", "draw", "year_id")]
 # ex
 lt[, exdel := Txdel / lxdel]
 
-# Decompose
-lt[, nLxcause := ifelse(nLxdel == 0, 0, (nLx / nLxdel) * n)]
-cast.lt <- dcast(lt, age + sex_id + location_id + draw + n ~ year_id, value.var = c("nLxcause", "nLxdel"))
-decomp.cols <- c()
-for (y1 in years) {
-	for (y2 in years[-1]) {
-	    year.start <- y1
-	    if (y1 >= y2) {
-	    	next
-	    } else {
-	    	year.end <- y2
-	    }
-		cast.lt[, (paste0("decomp_", year.start, "_", year.end)) := (get(paste0("nLxcause_", year.end)) - get(paste0("nLxcause_", year.start))) * ((get(paste0("nLxdel_", year.end)) + get(paste0("nLxdel_", year.start))) / (2 * n)) ]
-		decomp.cols <- c(decomp.cols, paste0("decomp_", year.start, "_", year.end))
+if(table.decomp) {
+	# Decompose
+	lt[, nLxcause := ifelse(nLxdel == 0, 0, (nLx / nLxdel) * n)]
+	cast.lt <- dcast(lt, age + sex_id + location_id + draw + n ~ year_id, value.var = c("nLxcause", "nLxdel"))
+	decomp.cols <- c()
+	for (y1 in years) {
+		for (y2 in years[-1]) {
+		    year.start <- y1
+		    if (y1 >= y2) {
+		    	next
+		    } else {
+		    	year.end <- y2
+		    }
+			cast.lt[, (paste0("decomp_", year.start, "_", year.end)) := (get(paste0("nLxcause_", year.end)) - get(paste0("nLxcause_", year.start))) * ((get(paste0("nLxdel_", year.end)) + get(paste0("nLxdel_", year.start))) / (2 * n)) ]
+			decomp.cols <- c(decomp.cols, paste0("decomp_", year.start, "_", year.end))
+		}
 	}
+
+	collapsed.decomp <- cast.lt[, lapply(.SD, sum), by = .(sex_id, draw), .SDcols = decomp.cols]
+	summary.decomp <- summarize.draws(collapsed.decomp, value.vars = decomp.cols, id.vars = "sex_id")
+	melt.summary <- melt(summary.decomp, id.vars = "sex_id")
+	melt.summary[, year1 := as.integer(tstrsplit(as.character(variable), "_")[[2]])]
+	melt.summary[, year2 := as.integer(tstrsplit(as.character(variable), "_")[[3]])]
+	melt.summary[, stat := tstrsplit(as.character(variable), "_")[[4]]]
+	cast.summary <- dcast(melt.summary, sex_id + year1 + year2 ~ stat, value.var = "value")
+	cast.summary[, location_name := loc.name]
+	cast.summary <- merge(cast.summary, sex.table, by = "sex_id")
+	setnames(cast.summary, c("mean", "lower", "upper"), c("decomp_mean", "decomp_lower", "decomp_upper"))
+	cast.summary <- cast.summary[order(location_name, year1, year2, sex), .(location_name, year1, year2, sex, decomp_mean, decomp_lower, decomp_upper)]
+	write.csv(cast.summary, paste0(decomp.table.dir, loc, ".csv"), row.names = F)
 }
 
-collapsed.decomp <- cast.lt[, lapply(.SD, sum), by = .(sex_id, draw), .SDcols = decomp.cols]
-summary.decomp <- summarize.draws(collapsed.decomp, value.vars = decomp.cols, id.vars = "sex_id")
-melt.summary <- melt(summary.decomp, id.vars = "sex_id")
-melt.summary[, year1 := as.integer(tstrsplit(as.character(variable), "_")[[2]])]
-melt.summary[, year2 := as.integer(tstrsplit(as.character(variable), "_")[[3]])]
-melt.summary[, stat := tstrsplit(as.character(variable), "_")[[4]]]
-cast.summary <- dcast(melt.summary, sex_id + year1 + year2 ~ stat, value.var = "value")
-
-# LE diff
-diff.dt <- lt.dt[age_group_id == 28 & sex_id %in% 1:2 & year_id %in% years, .(year_id, ex, sex_id, location_id)]
-cast.diff <- dcast(diff.dt, sex_id + location_id ~ year_id, value.var = "ex")
-cast.diff[, diff := get(as.character(year.end)) - get(as.character(year.start))]
-write.csv(cast.diff, "/home/j/temp/aucarter/le_decomp/le_diff.csv", row.names = F)
-
-# Convert to pct of total change in LE
-merge.decomp <- merge(collapse.decomp, cast.diff[, .(sex_id, location_id, diff)], by = c("sex_id", "location_id"))
-merge.decomp[, pct := total_decomp / diff * 100]
-
-# Collapse and summarize
-summary.decomp <- merge.decomp[, .(mean = mean(pct), lower = quantile(pct, 0.025), 
-								  upper = quantile(pct, 0.975)), by = .(sex_id, location_id)]
-
-summary.decomp[, Sex := ifelse(sex_id == 1, "Male", "Female")]
-summary.decomp <- merge(summary.decomp, loc.table[,.(location_id, location_name)], by = "location_id")
-
-
+if(table.deleted) {
+	e0.del.dt <- merge(lt[age_group_id == 28 & year_id %in% years, .(year_id, exdel, sex_id, location_id, draw)],
+			       loc.table[, .(location_id, location_name)], by = "location_id")
+	e0.del.dt <- summarize.draws(e0.del.dt, value.vars = "exdel", id.vars = c("location_name", "year_id", "sex_id"))
+	setnames(e0.del.dt, c("year_id"), c("year"))
+	e0.del.dt <- merge(e0.del.dt, sex.table, by = "sex_id")
+	e0.del.dt <- e0.del.dt[order(location_name, year, sex), .(location_name, year, sex, exdel_mean, exdel_lower, exdel_upper)]
+	write.csv(e0.del.dt, paste0(e0.table.dir, loc, ".csv"), row.names = F)	
+}
 ### End
