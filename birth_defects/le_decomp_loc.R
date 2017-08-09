@@ -21,7 +21,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	loc <- args[1]
 } else {	
-	loc <- "CHN_44534"
+	loc <- "CHN_44533"
 }
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
@@ -82,10 +82,12 @@ regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
 sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "All"))
 
 ### Code
-region <- regions[ihme_loc_id == loc, region]
-if(region) {
-	lt.dir <- paste0(root, "temp/aucarter/le_decomp/region_lts/")
-	loc.table <- regions
+if(loc != "CHN_44533")
+	region <- regions[ihme_loc_id == loc, region]
+	if(region) {
+		lt.dir <- paste0(root, "temp/aucarter/le_decomp/region_lts/")
+		loc.table <- regions
+	}
 }
 loc.id <- loc.table[ihme_loc_id == loc, location_id]
 loc.name <- loc.table[ihme_loc_id == loc, location_name]
