@@ -28,8 +28,6 @@ if(length(args) > 0) {
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
 years <- c(1996, 2006, 2016)
-table.e0 <- T
-table.decomp <- T
 table.deleted <- T
 ncores <- 10
 
@@ -39,11 +37,7 @@ lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/wi
 # Tables
 table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 dir.create(table.dir, showWarnings = F)
-e0.table.dir <- paste0(table.dir, "e0/")
-dir.create(e0.table.dir, showWarnings = F)
-decomp.table.dir <- paste0(table.dir, "decomp/")
-dir.create(decomp.table.dir, showWarnings = F)
-deleted.table.dir <- paste0(table.dir, "deleted/")
+deleted.table.dir <- paste0(table.dir, del.age, "_deleted/")
 dir.create(deleted.table.dir, showWarnings = F)
 
 # Plots
@@ -98,17 +92,6 @@ loc.name <- loc.table[ihme_loc_id == loc, location_name]
 
 # Life-tables for each sex in years of analysis
 lt.dt <- fread(paste0(lt.dir, "lt_", loc.id, ".csv"))[year_id %in% years]
-
-# Write life expectancy at birth
-if(table.e0) {
-	e0.dt <- merge(lt.dt[age_group_id == 28 & year_id %in% years, .(year_id, ex, sex_id, location_id, draw)],
-			       loc.table[, .(location_id, location_name)], by = "location_id")
-	e0.dt <- summarize.draws(e0.dt, value.vars = "ex", id.vars = c("location_name", "year_id", "sex_id"))
-	setnames(e0.dt, c("year_id"), c("year"))
-	e0.dt <- merge(e0.dt, sex.table, by = "sex_id")
-	e0.dt <- e0.dt[order(location_name, year, sex), .(location_name, year, sex, ex_mean, ex_lower, ex_upper)]
-	write.csv(e0.dt, paste0(e0.table.dir, loc, ".csv"), row.names = F)
-}
 
 # Set last age group n to 5
 lt.dt[age_group_id == max(age_group_id), n := 5]
