@@ -31,7 +31,7 @@ ncores <- 10
 table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 e0.table.dir <- paste0(table.dir, "e0/")
 decomp.table.dir <- paste0(table.dir, "decomp/")
-deleted.table.dir <- paste0(table.dir, "deleted/")
+deleted.table.dir <- paste0(table.dir, "deleted")
 
 ### Functions
 source(paste0(root, "temp/central_comp/libraries/current/r/get_location_metadata.R"))
@@ -46,7 +46,7 @@ e0.dt <- rbindlist(mclapply(e0.files, function(file) {
 	dt <- fread(paste0(e0.table.dir, file))
 }, mc.cores = ncores))
 e0.dt <- e0.dt[order(year, sex, location_name)]
-write.csv(e0.dt, paste0(table.dir, "e0.csv"), row.names = F)
+write.csv(e0.dt, paste0(table.dir, "e0 (Table 1).csv"), row.names = F)
 
 # Combine life expectancy decomp files
 decomp.files <- list.files(decomp.table.dir)
@@ -54,14 +54,25 @@ decomp.dt <- rbindlist(mclapply(decomp.files, function(file) {
 	dt <- fread(paste0(decomp.table.dir, file))
 }, mc.cores = ncores))
 decomp.dt <- decomp.dt[order(sex, location_name)]
-write.csv(decomp.dt, paste0(table.dir, "decomp.csv"), row.names = F)
+write.csv(decomp.dt, paste0(table.dir, "decomp (Table 3).csv"), row.names = F)
 
 # Combine cause-deleted life expectancy files
 deleted.files <- list.files(deleted.table.dir)
 deleted.dt <- rbindlist(mclapply(deleted.files, function(file) {
-	dt <- fread(paste0(deleted.table.dir, file))
+	dt <- fread(paste0(deleted.table.dir, "/", file))
 }, mc.cores = ncores))
 deleted.dt <- deleted.dt[order(year, sex, location_name)]
-write.csv(deleted.dt, paste0(table.dir, "deleted.csv"), row.names = F)
+write.csv(deleted.dt, paste0(table.dir, "deleted (Table 4).csv"), row.names = F)
 
+# Combine single age cause-deleted life expectancy files
+for(del.age in c(28, 5)) {
+	age.group <- ifelse(del.age == 28, "0-1", "1-5")
+	age.table.dir <- paste0(table.dir, del.age, "_deleted")
+	deleted.files <- list.files(age.table.dir)
+	deleted.dt <- rbindlist(mclapply(deleted.files, function(file) {
+		dt <- fread(paste0(table.dir, del.age, "_deleted/", file))
+	}, mc.cores = ncores))
+	deleted.dt <- deleted.dt[order(year, sex, location_name)]
+	write.csv(deleted.dt, paste0(table.dir, age.group, "_deleted (Table 5).csv"), row.names = F)
+}
 ### End

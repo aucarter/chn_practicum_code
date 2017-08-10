@@ -44,7 +44,7 @@ regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
 ### Code
 prov.list <- loc.table[parent_id == 44533, ihme_loc_id]
 region.list <- regions[region == 1, ihme_loc_id]
-loc.list <- c(prov.list, region.list, "CHN_44533")
+loc.list <- rev(c(prov.list, region.list, "CHN_44533"))
 
 ## Regional Life Tables
 if(region.lt) {
@@ -78,14 +78,14 @@ if(le.decomp) {
 
 ## Life Expectancy Decomposition with only 1 age group cause-deleted
 if(le.age) {
-	for (loc in loc.list) {
+	for (loc in c(region.list, "CHN_44533")) {
 		for(del.age in c(28, 5)) {
 			le.age.string <- paste0("qsub -pe multi_slot 10 ",
 								"-e /share/temp/sgeoutput/", user, "/errors ",
 								"-o /share/temp/sgeoutput/", user, "/output ",
-								"-N ", loc, "_", del.age, "_le_decomp ", 
+								"-N ", loc, "_", del.age, "_le_age ", 
 								shell.dir, "shell_R.sh ", 
-								code.dir, "le_decomp_loc.R ", 
+								code.dir, "le_decomp_age.R ", 
 								loc, " ", del.age)
 			print(le.age.string)
 			system(le.age.string)
