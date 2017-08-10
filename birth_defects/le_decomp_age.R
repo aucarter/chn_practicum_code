@@ -20,14 +20,14 @@ library(data.table); library(ggplot2);library(parallel)
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	loc <- args[1]
+	del.age <- args[2]
 } else {	
 	loc <- "CHN_44533"
+	del.age <- 28
 }
 single.cause <- "Congenital birth defects"
 cause.names <- c(single.cause, "All causes")
 years <- c(1996, 2006, 2016)
-table.e0 <- T
-table.decomp <- T
 table.deleted <- T
 ncores <- 10
 
@@ -37,11 +37,7 @@ lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/wi
 # Tables
 table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 dir.create(table.dir, showWarnings = F)
-e0.table.dir <- paste0(table.dir, "e0/")
-dir.create(e0.table.dir, showWarnings = F)
-decomp.table.dir <- paste0(table.dir, "decomp/")
-dir.create(decomp.table.dir, showWarnings = F)
-deleted.table.dir <- paste0(table.dir, "deleted/")
+deleted.table.dir <- paste0(table.dir, del.age, "_deleted/")
 dir.create(deleted.table.dir, showWarnings = F)
 
 # Plots
@@ -96,17 +92,6 @@ loc.name <- loc.table[ihme_loc_id == loc, location_name]
 
 # Life-tables for each sex in years of analysis
 lt.dt <- fread(paste0(lt.dir, "lt_", loc.id, ".csv"))[year_id %in% years]
-
-# Write life expectancy at birth
-if(table.e0) {
-	e0.dt <- merge(lt.dt[age_group_id == 28 & year_id %in% years, .(year_id, ex, sex_id, location_id, draw)],
-			       loc.table[, .(location_id, location_name)], by = "location_id")
-	e0.dt <- summarize.draws(e0.dt, value.vars = "ex", id.vars = c("location_name", "year_id", "sex_id"))
-	setnames(e0.dt, c("year_id"), c("year"))
-	e0.dt <- merge(e0.dt, sex.table, by = "sex_id")
-	e0.dt <- e0.dt[order(location_name, year, sex), .(location_name, year, sex, ex_mean, ex_lower, ex_upper)]
-	write.csv(e0.dt, paste0(e0.table.dir, loc, ".csv"), row.names = F)
-}
 
 # Set last age group n to 5
 lt.dt[age_group_id == max(age_group_id), n := 5]
@@ -165,7 +150,8 @@ lt <- lt[order(year_id, sex_id, draw, age),]
 
 ## Calculate cause deleted life table
 # px
-lt[, pxdel := px ^ (1 - mx_prop)]
+lt[, pxdel := px]
+lt[age_group_id == del.age, pxdel := px ^ (1 - mx_prop)]
 lt[age == max(age), pxdel := 0]
 
 # Set first age group lx to 1 and calculate resulting lx
@@ -199,38 +185,6 @@ lt[, Txdel := rev(cumsum(rev(nLxdel))), by = c("sex_id", "draw", "year_id")]
 
 # ex
 lt[, exdel := Txdel / lxdel]
-
-if(table.decomp) {
-	# Decompose
-	lt[, nLxcause := ifelse(nLxdel == 0, 0, (nLx / nLxdel) * n)]
-	cast.lt <- dcast(lt, age + sex_id + location_id + draw + n ~ year_id, value.var = c("nLxcause", "nLxdel"))
-	decomp.cols <- c()
-	for (y1 in years) {
-		for (y2 in years[-1]) {
-		    year.start <- y1
-		    if (y1 >= y2) {
-		    	next
-		    } else {
-		    	year.end <- y2
-		    }
-			cast.lt[, (paste0("decomp_", year.start, "_", year.end)) := (get(paste0("nLxcause_", year.end)) - get(paste0("nLxcause_", year.start))) * ((get(paste0("nLxdel_", year.end)) + get(paste0("nLxdel_", year.start))) / (2 * n)) ]
-			decomp.cols <- c(decomp.cols, paste0("decomp_", year.start, "_", year.end))
-		}
-	}
-
-	collapsed.decomp <- cast.lt[, lapply(.SD, sum), by = .(sex_id, draw), .SDcols = decomp.cols]
-	summary.decomp <- summarize.draws(collapsed.decomp, value.vars = decomp.cols, id.vars = "sex_id")
-	melt.summary <- melt(summary.decomp, id.vars = "sex_id")
-	melt.summary[, year1 := as.integer(tstrsplit(as.character(variable), "_")[[2]])]
-	melt.summary[, year2 := as.integer(tstrsplit(as.character(variable), "_")[[3]])]
-	melt.summary[, stat := tstrsplit(as.character(variable), "_")[[4]]]
-	cast.summary <- dcast(melt.summary, sex_id + year1 + year2 ~ stat, value.var = "value")
-	cast.summary[, location_name := loc.name]
-	cast.summary <- merge(cast.summary, sex.table, by = "sex_id")
-	setnames(cast.summary, c("mean", "lower", "upper"), c("decomp_mean", "decomp_lower", "decomp_upper"))
-	cast.summary <- cast.summary[order(location_name, year1, year2, sex), .(location_name, year1, year2, sex, decomp_mean, decomp_lower, decomp_upper)]
-	write.csv(cast.summary, paste0(decomp.table.dir, loc, ".csv"), row.names = F)
-}
 
 if(table.deleted) {
 	e0.del.dt <- merge(lt[age_group_id == 28 & year_id %in% years, .(year_id, ex, exdel, sex_id, location_id, draw)],
