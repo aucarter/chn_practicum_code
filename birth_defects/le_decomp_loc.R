@@ -227,12 +227,13 @@ if(table.decomp) {
 }
 
 if(table.deleted) {
-	e0.del.dt <- merge(lt[age_group_id == 28 & year_id %in% years, .(year_id, exdel, sex_id, location_id, draw)],
+	e0.del.dt <- merge(lt[age_group_id == 28 & year_id %in% years, .(year_id, ex, exdel, sex_id, location_id, draw)],
 			       loc.table[, .(location_id, location_name)], by = "location_id")
-	e0.del.dt <- summarize.draws(e0.del.dt, value.vars = "exdel", id.vars = c("location_name", "year_id", "sex_id"))
+	e0.del.dt[, diff := exdel - ex]
+	e0.del.dt <- summarize.draws(e0.del.dt, value.vars = "diff", id.vars = c("location_name", "year_id", "sex_id"))
 	setnames(e0.del.dt, c("year_id"), c("year"))
 	e0.del.dt <- merge(e0.del.dt, sex.table, by = "sex_id")
-	e0.del.dt <- e0.del.dt[order(location_name, year, sex), .(location_name, year, sex, exdel_mean, exdel_lower, exdel_upper)]
+	e0.del.dt <- e0.del.dt[order(location_name, year, sex), .(location_name, year, sex, diff_mean, diff_lower, diff_upper)]
 	write.csv(e0.del.dt, paste0(deleted.table.dir, loc, ".csv"), row.names = F)	
 }
 ### End
