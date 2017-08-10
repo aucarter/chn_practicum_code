@@ -82,12 +82,14 @@ regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
 sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "All"))
 
 ### Code
-if(loc != "CHN_44533")
+if(loc != "CHN_44533") {
 	region <- regions[ihme_loc_id == loc, region]
 	if(region) {
 		lt.dir <- paste0(root, "temp/aucarter/le_decomp/region_lts/")
 		loc.table <- regions
 	}
+} else {
+	region <- 1
 }
 loc.id <- loc.table[ihme_loc_id == loc, location_id]
 loc.name <- loc.table[ihme_loc_id == loc, location_name]
@@ -115,7 +117,11 @@ lt.dt <- lt.dt[year_id %in% years]
 
 ## Get draws of birth defects and all cause to make proportions
 if(region) {
-	loc.id <- loc.table[region_name == loc.name, location_id]
+	if(loc != "CHN_44533") {
+		loc.id <- loc.table[region_name == loc.name, location_id]
+	} else{
+		loc.id <- loc.table[parent_id == 44533, location_id]
+	}
 }
 c.causes <- sapply(cause.names, function(cause) {
 	meta[cause_name == cause, cause_id]
@@ -189,7 +195,7 @@ lt[, nLxdel := n * lxdel_lead + axdel * dxdel]
 lt[age == max(age), nLxdel := (ex / (1 - mx_prop)) * lxdel]
 
 # Tx
-lt[, Txdel := rev(cumsum(rev(nLx))), by = c("sex_id", "draw", "year_id")]
+lt[, Txdel := rev(cumsum(rev(nLxdel))), by = c("sex_id", "draw", "year_id")]
 
 # ex
 lt[, exdel := Txdel / lxdel]
