@@ -1,7 +1,7 @@
 ############################################
 ## Maya Fraser
 ## 4/7/16
-## create maps of china province life expectancy for all provinces
+## create maps of china province risk factors for all provinces
 ############################################
 
 
@@ -36,8 +36,8 @@ prov.list <- setdiff(prov.list, remove)
 
 #Pull burden data
 years <- c(1990, 1995, 2000, 2005, 2010, 2016)
-all.mr <- get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 1, metric_id = 1, 
-    age_group_id = 1, sex_id = c(1,2), version = "latest")
+all.mr <- get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 1, metric_id = 3, 
+    age_group_id = 1, sex_id = 3, version = "latest")
 all.mr[, rate := val * 100000]
 
 # merge onto location metadata
@@ -57,30 +57,29 @@ rbPal <- colorRampPalette(c("dark green", "yellow","red"))
 colors <- rbPal(5)
 
 # actually plot
-pdf(paste0(root, "temp/", user, "/chn/China_maps_count.pdf",sep=""),width=12,height=8)
+pdf(paste0(root, "temp/", user, "/chn/China_maps_rate_abrev.pdf",sep=""),width=12,height=8)
 
 ### loop through the years
-for(year in years) {
-    for(sex in 1:2){
-        data_temp <- data[data$sex_id == sex & data$year_id == year,]
-        sex.name <- ifelse(sex == 1, "Males", "Females")
-        ylim <- range(data_temp$val, na.rm=TRUE)
+for(year in c(1990, 2000, 2016)) {
+    #for(sex in 1:2){
+        data_temp <- data[data$year_id == year,]
+       #sex.name <- ifelse(sex == 1, "Males", "Females")
+        ylim <- range(data_temp$rate, na.rm=TRUE)
         ylim <- c(floor(ylim[1]), ceiling(ylim[2]))
         # order the variables to make sure the graphing doesn't get messed up
         data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
-        title = paste("Attributable deaths due to all risk factors in", year,"for Children Under 5,", 
-                      sex.name, sep=" ")
+        title = paste("Attributable Mortality rate due to all risk factors in", year,"for Children Under 5,", sep=" ")
         
         print(ggplot(data_temp) +
-                geom_polygon(aes(x=long, y=lat, group=group, fill=val)) +
+                geom_polygon(aes(x=long, y=lat, group=group, fill=rate)) +
                 scale_fill_gradientn(colours=colors, limits=ylim)  + 
                 geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
                 scale_x_continuous("", breaks=NULL) + 
                 scale_y_continuous("", breaks=NULL) + 
                 coord_fixed(ratio=1) + 
-                guides(fill=guide_colourbar(title="Death Count", barheight=10)) + 
+                guides(fill=guide_colourbar(title="Death/100,000", barheight=10)) + 
                 theme_bw(base_size=10) +  
                 labs(title=paste(title, sep="")))   
-  }
+  #}
 }
 dev.off()
