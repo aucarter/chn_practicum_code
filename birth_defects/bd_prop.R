@@ -30,7 +30,7 @@ ncores <- 10
 ### Paths
 table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 dir.create(table.dir, showWarnings = F)
-bd.prop.path <- paste0(table.dir, "bd_prop.csv")
+bd.prop.path <- paste0(table.dir, "bd_prop (Table 2).csv")
 
 ### Functions
 source(paste0(root, "temp/central_comp/libraries/current/r/get_location_metadata.R"))
