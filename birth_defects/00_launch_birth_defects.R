@@ -29,6 +29,7 @@ library(data.table)
 region.lt <- T
 le.decomp <- T
 le.age <- T
+daly.decomp <- T
 bd.prop <- T
 combine <- T
 
@@ -78,7 +79,7 @@ if(le.decomp) {
 
 ## Life Expectancy Decomposition with only 1 age group cause-deleted
 if(le.age) {
-	for (loc in c(region.list, "CHN_44533")) {
+	for (loc in loc.list) {
 		for(del.age in c(28, 5)) {
 			le.age.string <- paste0("qsub -pe multi_slot 10 ",
 								"-e /share/temp/sgeoutput/", user, "/errors ",
@@ -90,6 +91,21 @@ if(le.age) {
 			print(le.age.string)
 			system(le.age.string)
 		}
+	}
+}
+
+## Life Expectancy Decomposition
+if(daly.decomp) {
+	for (loc in loc.list) {
+		daly.string <- paste0("qsub -pe multi_slot 10 ",
+							"-e /share/temp/sgeoutput/", user, "/errors ",
+							"-o /share/temp/sgeoutput/", user, "/output ",
+							"-N ", loc, "_daly_decomp ", 
+							shell.dir, "shell_R.sh ", 
+							code.dir, "daly_decomp_loc.R ", 
+							loc)
+		print(daly.string)
+		system(daly.string)
 	}
 }
 

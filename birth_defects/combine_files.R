@@ -24,7 +24,7 @@ library(data.table); library(parallel)
 # } else {
 
 # }
-ncores <- 10
+ncores <- 2
 
 ### Paths
 # e0
@@ -66,7 +66,7 @@ write.csv(deleted.dt, paste0(table.dir, "deleted (Table 4).csv"), row.names = F)
 
 # Combine single age cause-deleted life expectancy files
 for(del.age in c(28, 5)) {
-	age.group <- ifelse(del.age == 28, "0-1", "1-5")
+	age.group <- ifelse(del.age == 28, "0-1", "1-4+")
 	age.table.dir <- paste0(table.dir, del.age, "_deleted")
 	deleted.files <- list.files(age.table.dir)
 	deleted.dt <- rbindlist(mclapply(deleted.files, function(file) {
