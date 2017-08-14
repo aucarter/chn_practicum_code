@@ -102,7 +102,6 @@ cod$cause_name <- factor(cod$cause_name, levels=c("Lower respiratory infections"
 	"Congenital birth defects", "Drowning"))
 
 # Making mainland China name shorter to fit in figure
-revalue(cod$location_name, c("China (without Hong Kong and Macao)"="China \n without Hong Kong \n and Macao"))
 cod$location_name[cod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
 
 ## Generating PDF figure for order by MR and order by SDI
