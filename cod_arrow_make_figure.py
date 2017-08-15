@@ -31,8 +31,8 @@ args = parser.parse_args()
 os.chdir('{outdir}'.format(outdir=args.outdir))
 
 #### import datafrom
-df = pd.read_csv(r"/homes/eeldren/chn_practicum_code/arrowset_double_ages_98_99_GBD2016_{sex}.csv".format(sex=args.sex))
-#df = pd.read_csv(r"/homes/eeldren/chn_practicum_code/arrowset_double_ages_98_99_GBD2016_{sex}.csv")
+df = pd.read_csv(r"/home/j/temp/eeldren/mchs/arrowset_double_ages_98_99_GBD2016_{sex}.csv".format(sex=args.sex))
+
 
 #### open file for writing
 file = '{outdir}/arrowset_double_ages_98_99_GBD2016_v{daly_v}_{sex}.pdf'.format(outdir=args.outdir,daly_v=args.daly_v,sex=args.sex)

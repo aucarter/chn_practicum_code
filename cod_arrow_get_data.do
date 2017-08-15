@@ -32,8 +32,8 @@ local year1 = 1990
 local year2 = 2016
 local age_group = 1
 local change = 10001
-local sex = 2
-local sex_name = "females"
+local sex = 3
+local sex_name = "both sexes"
 local rank = 20
 local title "Leading `rank' level 3 causes of mortality rate (per 100,000 live births) for `sex_name', mainland China `year1' and `year2'"
 local outdir "$prefix/temp/eeldren/mchs"
@@ -149,7 +149,7 @@ foreach var of varlist _all {
 
 	
 // Export
-export delimited using "arrowset_double_ages_98_99_GBD2016_`sex'", replace
+export delimited using "`outdir'/arrowset_double_ages_98_99_GBD2016_`sex'", replace
 
 // Run arrow code
 !python "`codedir'/cod_arrow_make_figure.py" --outdir "`outdir'" --title "`title'" --daly_v "`daly_v'"  --year1 "`year1'" --year2 "`year2'"	--sex "`sex'"
