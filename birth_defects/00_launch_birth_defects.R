@@ -94,7 +94,7 @@ if(le.age) {
 	}
 }
 
-## Life Expectancy Decomposition
+## DALY Decomposition
 if(daly.decomp) {
 	for (loc in loc.list) {
 		daly.string <- paste0("qsub -pe multi_slot 10 ",

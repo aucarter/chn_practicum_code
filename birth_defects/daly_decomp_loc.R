@@ -23,10 +23,10 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
   loc <- args[1]
 } else {
-  loc <- "CHN_491"
+  loc <- "CHN_44533"
 }
 years <- c(1990, 2016)
-ages <- c(28, 5)
+ages <- c(28, 5, 6, 7)
 cause <- "Congenital birth defects"
 
 ### Paths
@@ -48,15 +48,33 @@ risk.meta <- get_rei_metadata(rei_set_id = 2, gbd_round_id = 4)
 regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
 
 ### Code
+
+# Sort out region stuff
 if(loc != "CHN_44533") {
-  loc.table <- regions
+  region <- regions[ihme_loc_id == loc, region]
+  if(region) {
+    loc.table <- regions
+  }
+} else {
+  region <- 1
 }
 loc.id <- loc.table[ihme_loc_id == loc, location_id]
 loc.name <- loc.table[ihme_loc_id == loc, location_name]
-
+if(region) {
+  if(loc != "CHN_44533") {
+    loc.id <- loc.table[region_name == loc.name, location_id]
+  } else{
+    loc.id <- loc.table[parent_id == 44533, location_id]
+  }
+}
 ## Read in population
 pop.dt <- get_population(location_id = loc.id, year_id = years, age_group_id = ages, sex_id = 1:3)
 pop.dt[, process_version_map_id := NULL]
+if(region) {
+  pop.dt <- pop.dt[, lapply(.SD, sum), by = .(year_id, sex_id, age_group_id)]
+  pop.dt[, location_id := NULL]
+  hold.pop <- copy(pop.dt)
+}
 pop.dt[, age_structure := population / sum(population), by = c("year_id", "sex_id")]
 pop.dt[, population := sum(population), by = c("year_id", "sex_id")]
 pop.dt[, year := ifelse(year_id == years[1], 1, 2)]
@@ -67,9 +85,18 @@ cause.id <- cause.meta[cause_name == cause, cause_id]
 daly.dt <- get_outputs(topic = "cause", cause_id = cause.id, 
                        measure_id = 2, metric_id = c(1, 3), location_id = loc.id, year_id = years, 
                        age_group_id = ages, sex_id = 1:3, gbd_round_id = 4, compare_version_id = 212)
-daly.dt[, year := ifelse(year_id == years[1], 1, 2)]
-daly.dt[, metric := ifelse(metric_id == 1, "count", "rate")]
-daly.cast <- dcast(daly.dt, age_group_id + sex_id ~ metric + year, value.var = "val")
+if(region) {
+  daly.dt <- daly.dt[metric_id == 1, lapply(.SD, sum), by = .(year_id, sex_id, age_group_id), .SDcols = "val"]
+  merge.daly <- merge(daly.dt, hold.pop, by = c("year_id", "sex_id", "age_group_id"))
+  merge.daly[, rate := val / population] 
+  setnames(merge.daly, "val", "count")
+  merge.daly[, year := ifelse(year_id == years[1], 1, 2)]
+  daly.cast <- dcast(merge.daly, age_group_id + sex_id ~ year, value.var = c("count", "rate"))    
+} else {
+  daly.dt[, year := ifelse(year_id == years[1], 1, 2)]
+  daly.dt[, metric := ifelse(metric_id == 1, "count", "rate")]
+  daly.cast <- dcast(daly.dt, age_group_id + sex_id ~ metric + year, value.var = "val")  
+}
 
 ## Combine and reshape
 dt <- merge(pop.cast, daly.cast, by = c("age_group_id", "sex_id"))
