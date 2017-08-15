@@ -19,6 +19,7 @@ sys.path.append('J:/WORK/10_gbd/00_library/functions')
 #### parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--outdir", help="output file", required=True)
+parser.add_argument("--sex", help="sex id", required=True)
 parser.add_argument("--title", help="title", required=True)
 parser.add_argument("--daly_v", help="dalynator version", required=True)
 parser.add_argument("--year1", help="start year", required=True)
@@ -30,11 +31,11 @@ args = parser.parse_args()
 os.chdir('{outdir}'.format(outdir=args.outdir))
 
 #### import datafrom
-df = pd.read_csv(r"/homes/eeldren/chn_practicum_code/arrowset_double_ages_98_99_GBD2016.csv")
-
+df = pd.read_csv(r"/homes/eeldren/chn_practicum_code/arrowset_double_ages_98_99_GBD2016_{sex}.csv".format(sex=args.sex))
+#df = pd.read_csv(r"/homes/eeldren/chn_practicum_code/arrowset_double_ages_98_99_GBD2016_{sex}.csv")
 
 #### open file for writing
-file = '{outdir}/arrowset_double_ages_98_99_GBD2016_v{daly_v}.pdf'.format(outdir=args.outdir,daly_v=args.daly_v)
+file = '{outdir}/arrowset_double_ages_98_99_GBD2016_v{daly_v}_{sex}.pdf'.format(outdir=args.outdir,daly_v=args.daly_v,sex=args.sex)
 c = canvas.Canvas(file, pagesize=letter)
 
 
