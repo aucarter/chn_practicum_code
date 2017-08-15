@@ -1,0 +1,40 @@
+---
+title: "Congenital Anomalies in China"
+author: "Austin Carter"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Introduction
+.	National achievement of SDG
+.	Subnational achievement? 
+.	Reference to 2016 paper to demonstrate growing importance of birth defects in U5M
+.	Link the impact of birth defects to traditional measures of health (LE and DALYs)
+
+# Methods
+
+## Data
+
+## Analyisis
+
+### Life Expectancy Decomposition
+In order to summarize the impact of changes in mortality from CAs, we decompose improvements in life expectancy across age groups and causes of death. Specifically, we assess the proportion of gains in life expectancy resulting from the improvements in CA mortality and calculate expected life expectancy after removal of CA mortality in infants and children 1-4 years old. We implement the Pollard method for decomposition using life tables and cause-specific mortality from GBD 2016. This method assumes independence of causes of death, enabling the construction of a cause-deleted life table through calculation of the probability of survival in age group a in the absence of CA mortality:
+
+$$ p_{-i} = \frac{p(a)}{p_i(a)}$$
+
+where $p(a)$ is probability of survival in the all-cause lifetable and $p_i (a)= e^{\mu_i (a)}$, $\mu_i(a)$ being age-specific mortality from CA. Setting the life table radix, $l_0$, to 1. Update $a_x$ in under-1, 1-4, 5-9, and the terminal age group to:
+
+$$a_{x, -i}= n + \frac{(1 - (\frac{\mu_i(x)}{\mu(x)})) * (1 - p_x)}{(1 - p_{x, -i}) * (a_x -n)}$$
+
+and total life years lived in the terminal age group is set to:
+
+$$ _nL_{x, -i} = \frac{e_x}{1 - \frac{\mu_i(x)}{\mu(x)}} * l_{x, -i}$$ 
+
+The difference in life expectancy between years can be decomposed into the contributions of each cause of deaths according to:
+
+$$e^*(0) - e(0) = \sum_{i = 1}^n{\sum_{x = 0}^\omega (_nL_{x,i}^* - _nL_{x,i})(\frac{_nL_{x,-i}^* + _nL_{x,-i}}{2n})}$$
+
+# Results
+
+#Discussion

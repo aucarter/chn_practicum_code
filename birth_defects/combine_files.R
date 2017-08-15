@@ -24,20 +24,15 @@ library(data.table); library(parallel)
 # } else {
 
 # }
-ncores <- 10
+ncores <- 2
 
 ### Paths
-# e0
 table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 e0.table.dir <- paste0(table.dir, "e0/")
 decomp.table.dir <- paste0(table.dir, "decomp/")
 deleted.table.dir <- paste0(table.dir, "deleted")
+daly.decomp.table.dir <- paste0(table.dir, "daly_decomp/")
 
-### Functions
-source(paste0(root, "temp/central_comp/libraries/current/r/get_location_metadata.R"))
-
-### Tables
-loc.table <- get_location_metadata(location_set_id = 22)
 
 ### Code
 # Combine life expectancy files
@@ -66,7 +61,7 @@ write.csv(deleted.dt, paste0(table.dir, "deleted (Table 4).csv"), row.names = F)
 
 # Combine single age cause-deleted life expectancy files
 for(del.age in c(28, 5)) {
-	age.group <- ifelse(del.age == 28, "0-1", "1-5")
+	age.group <- ifelse(del.age == 28, "0-1", "1-4+")
 	age.table.dir <- paste0(table.dir, del.age, "_deleted")
 	deleted.files <- list.files(age.table.dir)
 	deleted.dt <- rbindlist(mclapply(deleted.files, function(file) {
@@ -75,4 +70,13 @@ for(del.age in c(28, 5)) {
 	deleted.dt <- deleted.dt[order(year, sex, location_name)]
 	write.csv(deleted.dt, paste0(table.dir, age.group, "_deleted (Table 5).csv"), row.names = F)
 }
+
+# Combine life expectancy decomp files
+daly.decomp.files <- list.files(daly.decomp.table.dir)
+daly.decomp.dt <- rbindlist(mclapply(daly.decomp.files, function(file) {
+	dt <- fread(paste0(daly.decomp.table.dir, file))
+}, mc.cores = ncores))
+daly.decomp.dt <- daly.decomp.dt[order(sex, location_name, age)]
+write.csv(daly.decomp.dt, paste0(table.dir, "daly_decomp (Table 6).csv"), row.names = F)
+
 ### End
