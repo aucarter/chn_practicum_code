@@ -76,7 +76,7 @@ daly.decomp.files <- list.files(daly.decomp.table.dir)
 daly.decomp.dt <- rbindlist(mclapply(daly.decomp.files, function(file) {
 	dt <- fread(paste0(daly.decomp.table.dir, file))
 }, mc.cores = ncores))
-daly.decomp.dt <- daly.decomp.dt[order(sex_id, location_name)]
+daly.decomp.dt <- daly.decomp.dt[order(sex, location_name, age)]
 write.csv(daly.decomp.dt, paste0(table.dir, "daly_decomp (Table 6).csv"), row.names = F)
 
 ### End

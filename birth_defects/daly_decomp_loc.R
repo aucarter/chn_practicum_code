@@ -40,12 +40,15 @@ source(paste0(root, "temp/central_comp/libraries/current/r/get_cause_metadata.R"
 source(paste0(root, "temp/central_comp/libraries/current/r/get_rei_metadata.R"))
 source(paste0(root, "temp/central_comp/libraries/current/r/get_population.R"))
 source("/home/j/temp/central_comp/libraries/current/r/get_outputs.R")
+source(paste0(root,"/Project/Mortality/shared/functions/get_age_map.r"))
 
 ### Tables
 loc.table <- get_location_metadata(location_set_id = 22)
 cause.meta <- get_cause_metadata(cause_set_id = 2, gbd_round_id = 4)
 risk.meta <- get_rei_metadata(rei_set_id = 2, gbd_round_id = 4)
 regions <- fread(paste0(root, "temp/aucarter/le_decomp/chn_region_table.csv"))
+sex.table <- data.table(sex_id = 1:3, sex = c("Male", "Female", "All"))
+age.table <- data.table(get_age_map(type = "all"))
 
 ### Code
 
@@ -111,6 +114,12 @@ dt[, rate_effect := ((age_structure_1 * population_1 + age_structure_2 * populat
 
 dt[, ihme_loc_id := loc]
 dt[, location_name := loc.name]
+sex.dt <- merge(dt, sex.table, by = "sex_id")
+age.dt <- merge(sex.dt, age.table[, .(age_group_id, age_group_years_start)], by = "age_group_id")
+setnames(age.dt, "age_group_years_start", "age")
 
-write.csv(dt, out.path, row.names = F)
+out.dt <- age.dt[order(sex, age), .(location_name, sex, age, 
+                 count_1, count_2, population_effect, age_structure_effect, rate_effect)]
+setnames(out.dt, paste0("count_", 1:2), paste0("daly_count_", years))
+write.csv(out.dt, out.path, row.names = F)
 ### End
