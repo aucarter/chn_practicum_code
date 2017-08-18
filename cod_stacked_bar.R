@@ -43,6 +43,9 @@ years <- c(1990, 1995, 2000, 2005, 2010, 2016)
 # Get outputs of MR due to all causes at province-level
 mort.dt <- get_outputs(topic="cause", location_id=prov.list, year_id=years, age_group_id=1, sex_id="all",
 	measure_id=1, metric_id=1, cause_id="lvl3", version="latest")
+mort.dt[sex=="Male", sex:="Males"]
+mort.dt[sex=="Female", sex:="Females"]
+mort.dt[sex=="Both", sex:="Both sexes"]
 mainland.dt <- copy(mort.dt)
 mainland.dt <- mainland.dt[, lapply(.SD, sum), by = .(year_id, sex_id, sex, cause_id, cause_name), .SDcols = "val"]
 mainland.dt[, location_id:=44533]
@@ -93,19 +96,19 @@ sexes <- unique(cod$sex)
 
 # Generating color palette
 pal11 <- c("#1a8be9",
-"#97ccf8",
+"#7cc3e9",
 "#ec0591",
-"#ffafe0",
-"#0fcc2b",
-"#86f397",
+"#ff80ce",
+"#25a311",
+"#8dca84",
 "#ec9d00",
 "#fad282",
-"#ab0ad6",
-"#edb7fb",
-"#adadad")
+"#9107df",
+"#cb9ce6",
+"#c8c8c8")
 
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_mr.pdf",sep=""),width=12,height=8)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10.pdf",sep=""),width=12,height=8)
 
 for(year in years){
 	for(sx in sexes) {
@@ -128,13 +131,12 @@ for(year in years){
 
 		title=paste("Under-5 mortality by province for", year, ",", sx, sep=" ")
 
-		print(ggplot(data=ysorder, 
+		print(ggplot(data=ysorder,
 			aes(reorder(location_name, mr_sum), rate)) +
 			geom_bar(width=0.85,
 				stat="identity",
 				position=position_fill(),
 				aes(fill=cause_name)) +
-			#scale_fill_brewer(palette="Paired") +
 			scale_fill_manual(values=pal11) +
 			coord_flip() +
 			labs(title=paste(title, sep=""),
