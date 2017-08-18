@@ -47,18 +47,17 @@ provinces$id <- as.integer(provinces$id)
 loc.table <- get_location_metadata(location_set_id = 22)
 
 ## Generate list of relevant provinces
-prov.list <- setdiff(c(loc.table[parent_id == 6, location_id], loc.table[parent_id == 44533, location_id]), 44533)
-remove <- c(361, 354) # HK and Macao
-prov.list <- setdiff(prov.list, remove)
+prov.list <- loc.table[parent_id == 44533, location_id]
 locations <- data.frame(prov.list)
 setnames(locations, "prov.list", "location_id")
 
 ## Create mortality rate per 100,000 live births by cause
 years <- c(1990, 1995, 2000, 2005, 2010, 2016)
+cause_ids <- c(322, 381, 382, 641, 698)
 
 # Getting under-5 deaths by cause
 deaths <- get_outputs(topic="cause", location_id=prov.list, year_id=years, age_group_id=1, sex_id="all",
-    measure_id=1, metric_id=1, cause_id="lvl3", version="latest")
+    measure_id=1, metric_id=1, cause_id=cause_ids, version="latest")
 
 # Getting live births
 lbirths <- get_covariate_estimates(covariate_name_short="live_births_by_sex", location_id=prov.list)
@@ -70,15 +69,13 @@ deaths <- subset(deaths, select=-c(measure_id, metric_id, age_group_id, age_grou
 cod.mr <- merge(lbirths, deaths, by=c("location_id", "location_name", "year_id", "sex_id"))
 cod.mr[, rate:=(val/live_births)*100000]
 
-## Subset to get selected causes
-# Get cause_ids for selected causes
-cause_id_sub <- cod.mr[grepl("encephalopathy|Lower|Congenital birth|Drowning|Neonatal preterm", cod.mr$cause_name), ]
-#cause_id_sub <- cod.mr[grepl("encephalopathy", cod.mr$cause_name), ]
+# Read in location file to map ids to MR data
+source(paste0(root, "/Project/Mortality/shared/functions/get_locations.r"))
+locations <- get_locations()
+locations <- locations[,c("ihme_loc_id", "location_name", "location_id", "local_id_2013")]
+locations <- rename(locations, c("local_id_2013" = "iso3"))
 
-# Subsetting
-cod.mr <- cod.mr[which(cod.mr$cause_id %in% cause_id_sub$cause_id)]
-
-## Merge onto location metadata
+## Merge location and data
 cod.mr <- merge(cod.mr, locations, by="location_id")
 setnames(cod.mr, "location_id", "id")
 
@@ -96,7 +93,7 @@ causes <- unique(cod.mr$cause_name)
 
 ## Generate maps
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps.pdf",sep=""),width=9.6,height=6.4)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_ratenew.pdf",sep=""),width=9.6,height=6.4)
 
 # Looping through years and sexes
 for(cause in causes) {
@@ -104,7 +101,7 @@ for(cause in causes) {
         for(sex in 1:3) {
             data_temp <- data[data$sex_id == sex & data$year_id == year,]
             sex.name <- ifelse(sex==1, "Males", ifelse(sex==2, "Females", "Both"))
-            ylim <- range(data_temp$val, na.rm=TRUE)
+            ylim <- range(data_temp$rate, na.rm=TRUE)
             # Order the variables to make sure the graphing doesn't get messed up
             data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
             title = paste("Mortality due to", cause, "in", year, "for Children Under 5,", 
@@ -112,7 +109,7 @@ for(cause in causes) {
             #ltitle = paste("Mortality rate \n (per 100,000 live births")
             
             print(ggplot(data_temp) +
-                    geom_polygon(aes(x=long, y=lat, group=group, fill=val)) +
+                    geom_polygon(aes(x=long, y=lat, group=group, fill=rate)) +
                     scale_fill_gradientn(colours=colors, limits=ylim)  + 
                     geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
                     scale_x_continuous("", breaks=NULL) + 
