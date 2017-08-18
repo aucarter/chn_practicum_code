@@ -93,7 +93,7 @@ causes <- unique(cod.mr$cause_name)
 
 ## Generate maps
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_ratenew.pdf",sep=""),width=9.6,height=6.4)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5.pdf",sep=""),width=9.6,height=6.4)
 
 # Looping through years and sexes
 for(cause in causes) {
