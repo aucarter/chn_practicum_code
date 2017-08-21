@@ -21,16 +21,17 @@ args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	loc <- args[1]
 	single.cause <- args[2]
+	ncores <- args[3]
 } else {	
 	loc <- "CHN_44533"
 	single.cause <- 641
+	ncores <- 2
 }
 c.causes <- c(single.cause, 294)
 years <- c(1996, 2006, 2016)
 table.e0 <- F
 table.decomp <- T
 table.deleted <- T
-ncores <- 10
 
 ### Paths
 lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/"
@@ -124,9 +125,9 @@ if(region) {
 		loc.id <- loc.table[parent_id == 44533, location_id]
 	}
 }
-# c.causes <- sapply(cause.names, function(cause) {
-# 	meta[cause_name == cause, cause_id]
-# })
+names(c.causes) <- lapply(c.causes, function(cause) {
+	meta[cause_id == cause, cause_name]
+})
 cause.dt <- rbindlist(lapply(c.causes, function(cause) {
 	temp.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = cause, location_ids = loc.id, year_id = years,
 					  source = "codcorrect", measure_ids = 1, sex_id = 1:3)
