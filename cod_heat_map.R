@@ -54,13 +54,14 @@ mainland.dt[, location_id:=44533]
 mainland.dt[, location_name:="China (without Hong Kong and Macao)"]
 deaths.dt <- rbind(mort.dt[, .(location_id, location_name, year_id, sex_id, sex, cause_id, cause_name, val)], mainland.dt)
 
-## Get top 15 causes and "all other causes" for each year/sex combo
+## Get top 15 causes for each year/sex combo
 # Keep top 15 causes for mainland China for each year/sex combo
 dtemp.dt <- deaths.dt[location_id==44533]
 dtemp15.dt <- dtemp.dt[order(year_id, sex_id, -val), .SD[1:15], by=c("year_id", "sex_id")]
 sexes <- unique(dtemp15.dt$sex_id)
-cod.dt <- NULL
 
+# Keep top 15 causes (according to mainland China rates) for each province
+cod.dt <- NULL
 for(year in years){
 	for(sx in sexes) {
 		cause.list <- dtemp15.dt[year_id==year & sex_id==sx, cause_id]
@@ -87,6 +88,8 @@ cod.mr[, rate:=(val/live_births)*100000]
 rcod <- setorder(cod.mr, year_id, sex_id, location_id, -rate)
 n <- length(rcod$cause_name)/15
 rcod[, values:=rep(1:15, times=n)]
+
+# Sum mortality rates to set province order
 rcod[, mr_sum := sum(rate), by=c("location_id", "year_id", "sex_id")]
 
 # Set desired sexes
