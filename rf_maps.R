@@ -35,40 +35,43 @@ remove <- c(361, 354) # HK and Macao
 prov.list <- setdiff(prov.list, remove)
 
 #Pull burden data
-years <- c(1990, 1995, 2000, 2005, 2010, 2016)
-all.mr <- get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 1, metric_id = 3, 
-    age_group_id = 1, sex_id = 3, version = "latest")
+risk_ids <- c(86, 87, 339, 239, 100, 93, 83, 84, 238)
+risk_ids <- c(240, 334, 335) #Top 3 in terms of death-Wasting, LBW, short gest
+risk_ids <- c(86,87,100) # Ranked 4-6 in terms of 2016 deaths
+risk_ids <- c(136,94,241)
+    # 334 (short gest), 335 (lbw), 341(imp kidney)
+years <- c(1990, 2005, 2016)
+all.mr <- get_outputs(topic = "rei", location_id = prov.list, rei_id = risk_ids, year_id = years, measure_id = 1, metric_id = 3, 
+    age_group_id = 1, sex_id = c(1,2), version = "latest")
 all.mr[, rate := val * 100000]
-
-# merge onto location metadata
-all.mr <- merge(all.mr, locations, by="location_id")
+all.mr <- all.mr[, .(location_id, year_id, location_name, sex_id, rei_name, rate)]
+#all.mr <- dcast(all.mr, location_id + year_id + location_name~rei_name, value.var ="rate")
 setnames(all.mr, "location_id", "id")
-
 #Merge onto shapefile
 data <- merge(provinces, all.mr, by=c("id"), all.x=T)
 
 ################################################
-### print the graphs
+### print the maps
 ################################################
-
-
 # set the colors
 rbPal <- colorRampPalette(c("dark green", "yellow","red"))
 colors <- rbPal(5)
 
 # actually plot
-pdf(paste0(root, "temp/", user, "/chn/China_maps_rate_abrev.pdf",sep=""),width=12,height=8)
+pdf(paste0(root, "temp/", user, "/chn/China_maps_rate_wrap_hi_sex2.pdf",sep=""),width=12,height=8)
 
 ### loop through the years
-for(year in c(1990, 2000, 2016)) {
+#for(year in c(1990, 2005, 2016)) {
     #for(sex in 1:2){
-        data_temp <- data[data$year_id == year,]
+        #data_temp <- data[data$year_id == year,]
+        data_temp <- data[complete.cases(data$rei_name),]
+        data_temp <- data_temp[complete.cases(data_temp$sex_id),] ##CHECK on this
        #sex.name <- ifelse(sex == 1, "Males", "Females")
         ylim <- range(data_temp$rate, na.rm=TRUE)
         ylim <- c(floor(ylim[1]), ceiling(ylim[2]))
         # order the variables to make sure the graphing doesn't get messed up
         data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
-        title = paste("Attributable Mortality rate due to all risk factors in", year,"for Children Under 5,", sep=" ")
+        title = paste("Attributable Mortality for risk factors in Children Under 5 by sex", sep=" ")
         
         print(ggplot(data_temp) +
                 geom_polygon(aes(x=long, y=lat, group=group, fill=rate)) +
@@ -77,9 +80,46 @@ for(year in c(1990, 2000, 2016)) {
                 scale_x_continuous("", breaks=NULL) + 
                 scale_y_continuous("", breaks=NULL) + 
                 coord_fixed(ratio=1) + 
-                guides(fill=guide_colourbar(title="Death/100,000", barheight=10)) + 
+                facet_wrap(~sex_name + rei_name) +
+                guides(fill=guide_colourbar(title="Deaths/100,000", barheight=10)) + 
                 theme_bw(base_size=10) +  
                 labs(title=paste(title, sep="")))   
-  #}
-}
+  #}    
+  #print(paste0("printed ", year))
+#}
 dev.off()
+
+
+#Reshape and gen percent change 1990-2016 map
+df <- dcast(all.mr, location_id + location_name ~ year_id, 
+              value.var = "rate")
+setnames(df, c("1990", "2016"), c("old", "new"))
+df <- df[,change := ((new-old)/old)*100]
+setnames(df, "location_id", "id")
+
+#Merge onto shapefile
+data_temp <- merge(provinces, df, by=c("id"), all.x=T)
+
+# set the colors
+rbPal <- colorRampPalette(c("dark green", "yellow","red"))
+colors <- rbPal(5)
+
+# actually plot
+pdf(paste0(root, "temp/", user, "/chn/China_maps_rate_change.pdf",sep=""),width=12,height=8)
+ylim <- range(data_temp$change, na.rm=TRUE)
+ylim <- c(floor(ylim[1]), ceiling(ylim[2]))
+# order the variables to make sure the graphing doesn't get messed up
+data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
+title = paste("Percent Change in Attributable Mortality rate due to all risk factors-1990-2016", sep=" ")
+        
+print(ggplot(data_temp) +
+        geom_polygon(aes(x=long, y=lat, group=group, fill=change)) +
+        scale_fill_gradientn(colours=colors, limits=ylim)  + 
+        geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
+        scale_x_continuous("", breaks=NULL) + 
+        scale_y_continuous("", breaks=NULL) + 
+        coord_fixed(ratio=1) + 
+        guides(fill=guide_colourbar(title="Percent Change", barheight=10)) + 
+        theme_bw(base_size=10) +
+        labs(title=paste(title, sep="")))
+    dev.off()

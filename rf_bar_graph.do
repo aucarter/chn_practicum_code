@@ -30,7 +30,7 @@
 // Set locals
     local metric = "death"
     local measure_id = 1   
-    local location_ids = "6 491 492 518 514 8" 
+    local location_ids = "6 491 492 493 494 495 496 497 498 499 500 501 502 503 504 505 506 507 508 509 510 511 512 513 514 515 516 517 518 519 520 521" 
     local year = 2016
     local gbd_id = 4
     local compare_version = 209
@@ -63,45 +63,45 @@ save `causelancet', replace
 
 foreach loc in `location_ids' {
 
-    if `loc' == 6 {
-        local location = "China"
-        local panel = "(A)"
-        local x_scale_max = 35
-        local f_name = "A"
-    }
+    // if `loc' == 6 {
+    //     local location = "China"
+    //     local panel = "(A)"
+    //     local x_scale_max = 35
+    //     local f_name = "A"
+    // }
 
-    else if `loc' == 492 {
-        local location = "Beijing"
-        local panel = "(E)"
-        local x_scale_max = 35
-        local f_name = "E"
-    }
-    else if `loc' == 491 {
-        local location = "Anhui"
-        local panel = "(F)"
-        local x_scale_max = 35
-        local f_name = "F"
-    } 
-    else if `loc' == 518 {
-        local location = "Tibet"
-        local panel = "(C)"
-        local x_scale_max = 40
-        local f_name = "C"
-    }
-    else if `loc' == 514 {
-        local location = "Shanghai"
-        local panel = "(B)"
-        local x_scale_max = 35
-        local f_name = "B"
-    }
-    else {
-        local location = "Sichuan"
-        local panel = "(D)"
-        local x_scale_max = 35
-        local f_name = "D"
-    }
+    // else if `loc' == 492 {
+    //     local location = "Beijing"
+    //     local panel = "(E)"
+    //     local x_scale_max = 35
+    //     local f_name = "E"
+    // }
+    // else if `loc' == 491 {
+    //     local location = "Anhui"
+    //     local panel = "(F)"
+    //     local x_scale_max = 35
+    //     local f_name = "F"
+    // } 
+    // else if `loc' == 518 {
+    //     local location = "Tibet"
+    //     local panel = "(C)"
+    //     local x_scale_max = 40
+    //     local f_name = "C"
+    // }
+    // else if `loc' == 514 {
+    //     local location = "Shanghai"
+    //     local panel = "(B)"
+    //     local x_scale_max = 35
+    //     local f_name = "B"
+    // }
+    // else {
+    //     local location = "Sichuan"
+    //     local panel = "(D)"
+    //     local x_scale_max = 35
+    //     local f_name = "D"
+    // }
     di in red "Starting on `location'..."
-    local fig = "Figure B: Deaths attributable to 'Level 3' risk factors for `location', for both sexes combined, 2016. `panel'"
+    local fig = "Figure B: Deaths attributable to 'Level 3' risk factors for `location', for both sexes combined, 2016."
 
     // load results
     get_outputs, topic(rei) measure_id(`measure_id') metric_id(1) year_id(`year') cause_id(all) rei_id(`risks') sex_id(`sex_id') age_group_id(1) location_id(`loc') gbd_round_id(`gbd_id') compare_version_id(`compare_version') clear

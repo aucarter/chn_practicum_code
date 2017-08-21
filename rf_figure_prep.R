@@ -86,21 +86,39 @@ for(risk in risk_ids) {
 }
 dev.off()
 
-# Get outputs of SEV's for top 6 risks
-risk_ids <- c(86, 87, 335, 334, 100, 240, 136)
-years <- seq(1990, 2016)
+#################################################################
+# SEV OVER TIME SCATTER for top 10 risks
+#################################################################
+risk_ids <- c(86, 87, 339, 239, 100, 93, 83, 84, 238, 341)
+years <- c(seq(1990, 2010, 5), 2016)
 sev.dt <- get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 29, rei_id = risk_ids, metric_id = 3, 
-	age_group_id = 1, version = "latest", sex_id = c(1, 2, 3))
+	age_group_id = 1, version = "latest", sex_id = c(1,2,3))
 setnames(sev.dt, "val", "sev")
-sexes <- unique(sev.dt$sex_id)
+sev.dt <- sev.dt[, .(location_id, sex_id, year_id, sev, rei_name, rei_id, location_name)]
+
+#Pull pops to transform SEVs in counts
+pop.dt <- get_population(location_id = c(prov.list, 44533), year_id = years, age_group_id = 1, sex_id = -1)
+pop.dt[, process_version_map_id := NULL]
+pop.chn <- pop.dt[location_id == 44533,]
+pop.chn[, location_name := "China"]
+
+#Merge onto SEVs dataset and aggregate to national
+sevagg.dt <- merge(sev.dt, pop.dt, by = c("location_id", "year_id", "sex_id"))
+sevagg.dt <- sevagg.dt[, sev_counts := population * sev]
+sevagg.dt <- sevagg.dt[,lapply(.SD, sum), by = .(rei_id, sex_id, rei_name, year_id), .SDcols = "sev_counts"]
+sevagg.dt <- merge(sevagg.dt, pop.chn, by = c("year_id", "sex_id"))
+sevagg.dt <- sevagg.dt[, sev := sev_counts/population]
+sevagg.dt <- sevagg.dt[, .(location_name, location_id, sex_id, year_id, sev, rei_name, rei_id)]
+sevboth.dt <- rbind(sevagg.dt, sev.dt)
 
 # loop through locations and scatter sev's over time
-scatter.path <- paste0(root, "temp/wgodwin/chn/sev_time_scatter_ageid2.pdf")
+sexes <- unique(sev.dt$sex_id)
+scatter.path <- paste0(root, "temp/wgodwin/chn/sev_time_scatter_nat.pdf")
 pdf(scatter.path)
 legend_title <- "Risk Name"
-for(loc in prov.list) {
+for(loc in c(44533, prov.list)) {
 	for(sx in sexes) {
-		temp.dt <- sev.dt[location_id == loc & sex_id == sx,]
+		temp.dt <- sevboth.dt[location_id == loc & sex_id == sx,]
 		loc_name <- unique(temp.dt$location_name)
 		sex_name <- unique(temp.dt$sex)
 		gg <- ggplot(temp.dt, 
@@ -121,7 +139,9 @@ for(loc in prov.list) {
 }
 dev.off()
 
+##########################################################################
 ####### Make SEV vs DALYs plot like Figure 4 in GBD RF 2015 capstone paper
+##########################################################################
 #reis <- rei.meta[level == 3, "rei_id"]
 risk_ids <- rei.meta[['rei_id']]
 yr_start <- 1990
@@ -163,17 +183,20 @@ mort.dt[, location_id := 44533]
 
 #Merge with SEVs and prep for plotting
 plot.dt <- merge(df, mort.dt, by=c("rei_name", "location_name", "sex_id"))
-scatter.path <- paste0(root, "temp/wgodwin/chn/sev_pct_change_sex.pdf")
+plot.dt <- plot.dt[val<.01, val := NA] # Exclude occupational risks with miniscule burden
+plot.dt <- plot.dt[abs(pct.change) > 3, pct.change := NA] # exclude BMI b/c too large change
+scatter.path <- paste0(root, "temp/wgodwin/chn/sev_pct_change_nobmi_t.pdf")
 pdf(scatter.path)
 for(sex in 1:2){
-	temp.dt <- plot.dt[sex_id == sex]
+	lim <- min(plot.dt$pct.change, na.rm = TRUE)
 	sex.name <- ifelse(sex == 1, "Males", "Females")
-	gg <- ggplot(temp.dt, 
+	gg <- ggplot(plot.dt[sex_id == sex], 
 					aes(x = val, 
 						y = pct.change)) +
-				#scale_x_continuous(trans='log10') +
+				scale_x_continuous(trans='log10') +
 				geom_point() +
-		    	ggtitle(paste0("Relationship Between Change in SEV's and Total Attributable deaths Among ", sex.name, " in China")) +
+		    	coord_cartesian(ylim = c(lim, -lim)) +
+		    	ggtitle(paste0("Change in SEV and Total Attributable deaths Among ", sex.name, " in China")) +
 		    	geom_text_repel(aes(label = rei_name)) +
 		    	labs(x = "Total Attributable Deaths in 2016", 
 		    		y = "Annualized rate of change in SEVs, 1990-2016")
@@ -190,9 +213,9 @@ years <- c(seq(1990, 2010, 5), 2016)
 mort.dt <-	get_outputs(topic = "rei", location_id = prov.list, year_id = years, measure_id = 1, rei_id = risk_ids, metric_id = 1, 
 			age_group_id = 1, version = "latest", sex_id = c(1,2))
 mainland.dt <- copy(mort.dt)
-mainland.dt <- mainland.dt[, lapply(.SD, sum), by = .(year_id, sex_id, rei_id, age_group_id), .SDcols = "val"]
+mainland.dt <- mainland.dt[, lapply(.SD, sum), by = .(year_id, sex_id, rei_id, age_group_id), .SDcols = c("val", "upper", "lower")]
 mainland.dt[, location_id := 44533]
-deaths.dt <- rbind(mort.dt[, .(location_id, year_id, sex_id, age_group_id, rei_id, val)], mainland.dt)
+deaths.dt <- rbind(mort.dt[, .(location_id, year_id, sex_id, age_group_id, rei_id, val, upper, lower)], mainland.dt)
 
 # Read in population
 pop.dt <- get_population(location_id = c(prov.list, 44533), year_id = years, age_group_id = 1, sex_id = -1)
@@ -200,7 +223,7 @@ pop.dt[, process_version_map_id := NULL]
 
 # Merge together and calculate rates
 merge.dt <- merge(deaths.dt, pop.dt, by = c("location_id", "year_id", "sex_id", "age_group_id"))
-merge.dt[, c("rate", "small") := .(val / population * 1e5, population / 5)]
+merge.dt[, c("rate", "upper", "lower") := .(val / population * 1e5, upper / population * 1e5, lower / population * 1e5)]
 merge.dt <- merge(merge.dt, rei.table, by = "rei_id")
 merge.dt <- merge(merge.dt, loc.name, by = "location_id")
 
@@ -223,10 +246,12 @@ for(loc in c(44533, prov.list)) {
 			ggtitle(paste0("All-cause mortality by Risk factor in ", loc_name, "-", sex.name)) +
 			labs(x = "Year", 
 				 y = "Attributable Mortality Rate (per 100,000)") +
-			scale_color_discrete(legend_title)
+			#scale_color_discrete(legend_title) +
+			#geom_errorbar(aes(ymin=lower, ymax=upper)) +
+			scale_color_manual(values = c("#1b9e77","#d95f02","#7570b3","#e7298a","#29dd22","#e6ab02","#a6761d","#666666", "#0000EE", "#BB0000"))
 			#facet_wrap(~location_name, ncol = 2, nrow = 2)
 		print(gg)
-		print(paste(loc, sex_name))
+		print(paste(loc, sex.name))
 	}
 }
 dev.off()
