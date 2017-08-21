@@ -4,17 +4,34 @@ author: "Austin Carter"
 output:
   pdf_document: default
   html_document: default
+bibliography: bib.bib
 ---
 
+```{r setup, echo = F, warning = F, message = F}
+library(tidyverse);library(RefManageR)
+biblio <- ReadZotero(user = "2637294", .params = list(key = "lqKyEfQrhb2G0hCMgSNpbvb6", collection = "M2XM3SCA"), delete.file = F)
+refs <- biblio %>% {
+  .$title
+} %>%
+  bind_rows() %>%
+  gather(key = 'key', value = 'title', 1:4)
+```
+
 # Introduction
-.	National achievement of SDG
-.	Subnational achievement? 
-.	Reference to 2016 paper to demonstrate growing importance of birth defects in U5M
-.	Link the impact of birth defects to traditional measures of health (LE and DALYs)
+
+National achievement of SDG. Subnational achievement? Reference to 2016 paper to demonstrate growing importance of birth defects in U5M `r Cite(biblio[[1]])`. Link the impact of birth defects to traditional measures of health (LE and DALYs)
 
 # Methods
 
 ## Data
+
+### Mortality
+
+China Disease Surveillance Points (DSP) for 1991-2002, sample registration system (SRS) data coded as verbal autopsy (VA). VA is method for determining the cause of death through an interview of relatives or associates of the deceased. China DSP for 2004-2012 coded as vital registration (VR) data. China National Maternal and CHild Health Surveillance system for 1996-2012.
+
+### Non-fatal
+
+China National Maternal and Child Health Surveillance System for Congenital Anomalies for 1996-2012. China hospital data for 2013-2015.
 
 ## Analyisis
 
@@ -35,6 +52,22 @@ The difference in life expectancy between years can be decomposed into the contr
 
 $$e^*(0) - e(0) = \sum_{i = 1}^n{\sum_{x = 0}^\omega (_nL_{x,i}^* - _nL_{x,i})(\frac{_nL_{x,-i}^* + _nL_{x,-i}}{2n})}$$
 
+### DALY Decomposition
+
+$$ T_{asgt} = A_{sgt} * B_{asgt} * C_{asgt}$$
+
+$$ E_A = (A_2 - A_1)(\frac{B_1*C_1 + B_2*C_2}{3} + \frac{B_1*C_2 + B_2*C_1}{6})$$
+
 # Results
 
+## LE Decomposition
+
+## DALY Decomposition
+
 #Discussion
+
+# References
+
+```{r bib, echo = F}
+PrintBibliography(biblio)
+```
