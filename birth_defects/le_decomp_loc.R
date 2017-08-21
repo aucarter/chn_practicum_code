@@ -20,16 +20,18 @@ library(data.table); library(ggplot2);library(parallel)
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args) > 0) {
 	loc <- args[1]
+	single.cause <- args[2]
+	ncores <- args[3]
 } else {	
 	loc <- "CHN_44533"
+	single.cause <- 641
+	ncores <- 2
 }
-single.cause <- "Congenital birth defects"
-cause.names <- c(single.cause, "All causes")
+c.causes <- c(single.cause, 294)
 years <- c(1996, 2006, 2016)
-table.e0 <- T
+table.e0 <- F
 table.decomp <- T
 table.deleted <- T
-ncores <- 10
 
 ### Paths
 lt.dir <- "/share/gbd/WORK/02_mortality/03_models/5_lifetables/results/lt_loc/with_shock/"
@@ -39,9 +41,9 @@ table.dir <- paste0(root, "temp/aucarter/le_decomp/tables/")
 dir.create(table.dir, showWarnings = F)
 e0.table.dir <- paste0(table.dir, "e0/")
 dir.create(e0.table.dir, showWarnings = F)
-decomp.table.dir <- paste0(table.dir, "decomp/")
+decomp.table.dir <- paste0(table.dir, "decomp/", single.cause, "/")
 dir.create(decomp.table.dir, showWarnings = F)
-deleted.table.dir <- paste0(table.dir, "deleted/")
+deleted.table.dir <- paste0(table.dir, "deleted/", single.cause, "/")
 dir.create(deleted.table.dir, showWarnings = F)
 
 # Plots
@@ -123,8 +125,8 @@ if(region) {
 		loc.id <- loc.table[parent_id == 44533, location_id]
 	}
 }
-c.causes <- sapply(cause.names, function(cause) {
-	meta[cause_name == cause, cause_id]
+names(c.causes) <- lapply(c.causes, function(cause) {
+	meta[cause_id == cause, cause_name]
 })
 cause.dt <- rbindlist(lapply(c.causes, function(cause) {
 	temp.dt <- get_draws(gbd_id_field = "cause_id", gbd_id = cause, location_ids = loc.id, year_id = years,
