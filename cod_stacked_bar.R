@@ -11,6 +11,8 @@ library(data.table)
 library(lattice)
 library(latticeExtra)
 library(RColorBrewer)
+library(Rcpp)
+#library("Rcpp", lib.loc="/snfs2/HOME/eeldren/R/x86_64-unknown-linux-gnu-library/3.1")
 library(ggplot2)
 library(maptools)
 library(RMySQL)
@@ -71,7 +73,6 @@ for(year in years){
 		remain.dt <- remain.dt[, lapply(.SD, sum, na.rm=TRUE),
 			by = .(sex_id, sex, year_id, location_id, location_name, cause_id, cause_name), .SDcols="val"]
 		top10rem.dt <- rbind(top10.dt, remain.dt, fill=TRUE)
-		#assign(paste("mort", year, sx, sep="."), top10rem.dt)
 		cod.dt <- rbind(cod.dt, top10rem.dt)
 	}
 }
@@ -124,7 +125,6 @@ for(year in years){
 		ysorder <- setorder(yscod, location_id, cause_order, na.last=TRUE)
 		ysorder$cause_name <- factor(ysorder$cause_name)
 		ysorder$cause_name <- reorder(ysorder$cause_name, ysorder$cause_order)
-		#ysorder$cause_name <- factor(ysorder[location_id==44533]$cause_name, levels=ysorder$cause_name)
 
 		ysorder$location_name[yscod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
 
@@ -135,12 +135,13 @@ for(year in years){
 			aes(reorder(location_name, mr_sum), rate)) +
 			geom_bar(width=0.85,
 				stat="identity",
-				position=position_fill(),
+				position=position_fill(reverse=TRUE),
 				aes(fill=cause_name)) +
 			scale_fill_manual(values=pal11) +
 			coord_flip() +
+			theme(plot.title=element_text(hjust=0.5)) +
 			labs(title=paste(title, sep=""),
-				y="Mortality rate (per 100,000 live births)",
+				y="Proportion of total mortality burden due to cause",
 				x="Province (in order of all-cause mortality rate, high to low)",
 				fill="Cause of death"))
 	}
