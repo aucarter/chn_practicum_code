@@ -11,7 +11,8 @@ library(data.table)
 library(lattice)
 library(latticeExtra)
 library(RColorBrewer)
-library("Rcpp", lib.loc="/snfs2/HOME/eeldren/R/x86_64-unknown-linux-gnu-library/3.1")
+library(Rcpp)
+#library("Rcpp", lib.loc="/snfs2/HOME/eeldren/R/x86_64-unknown-linux-gnu-library/3.1")
 library(ggplot2)
 library(maptools)
 library(RMySQL)
@@ -127,7 +128,7 @@ dev.off()
 
 
 
-
+### TEST MAP WITH ONLY ONE SEX-YEAR
 pdf(paste0(root, "temp/", user, "/mchs/china_cod_hmap_top15_TEST.pdf",sep=""),width=12,height=8)
 test <- rcod[year_id==1990&sex_id==1]
 print(ggplot(test, aes(reorder(location_name, mr_sum), reorder(cause_name, -rate))) +
@@ -141,12 +142,3 @@ print(ggplot(test, aes(reorder(location_name, mr_sum), reorder(cause_name, -rate
 	theme(axis.text.x.top=element_text(angle=45, vjust=0, hjust=0)) +
 	scale_y_discrete(position="top"))
 dev.off()
-
-
-## Heat map relative to China mainland
-# Generate variable indicating whether rate is higher or lower than China mainland
-#cod.mr[, mainland:=rate[location_id==44533], by=c("cause_id", "year_id", "sex_id")]
-#cod.mr[, rate_sd:=sd(rate, na.rm=FALSE), by=c("cause_id", "year_id", "sex_id")]
-
-# Greater than mainland = 3, close to = 2, less than = 1
-#cod.mr$mainland_tf <- ifelse(cod.mr$rate>cod.mr$mainland, )
