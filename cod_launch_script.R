@@ -2,10 +2,10 @@
 library(data.table)
 user <- Sys.info()["user"]
 code.dir <- paste0("/homes/", user, "/chn_practicum_code/")
-n.slots <- 5
+n.slots <- 10
 
-cause.list <- c(322, 381, 382, 641, 698)
-#cause.list <- c(322)
+#cause.list <- c(294, 322, 381, 382, 641, 698)
+cause.list <- c(294)
 n.jobs <- 0
 for (cause in cause.list) {
 	code.string <- paste0("qsub -pe multi_slot ", n.slots, " ",
