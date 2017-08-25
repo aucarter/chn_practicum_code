@@ -54,32 +54,33 @@ mainland.dt[, location_id:=44533]
 mainland.dt[, location_name:="China (without Hong Kong and Macao)"]
 deaths.dt <- rbind(mort.dt[, .(location_id, location_name, year_id, sex_id, sex, cause_id, cause_name, val)], mainland.dt)
 
-## Get top 10 causes and "all other causes" for each year/sex combo
-# Keep top 10 causes for mainland China for each year/sex combo
+## Get top 20 causes and "all other causes" for each year/sex combo
+# Keep top 20 causes for mainland China for each year/sex combo
 dtemp.dt <- deaths.dt[location_id==44533]
-dtemp15.dt <- dtemp.dt[order(year_id, sex_id, -val), .SD[1:15], by=c("year_id", "sex_id")]
-sexes <- unique(dtemp15.dt$sex_id)
+dtemp25.dt <- dtemp.dt[order(year_id, sex_id, -val), .SD[1:25], by=c("year_id", "sex_id")]
+sexes <- unique(dtemp25.dt$sex_id)
 cod.dt <- NULL
 
 for(year in years){
 	for(sx in sexes) {
-		cause.list <- dtemp15.dt[year_id==year & sex_id==sx, cause_id]
+		cause.list <- dtemp25.dt[year_id==year & sex_id==sx, cause_id]
 		ysdeaths.dt <- deaths.dt[year_id==year & sex_id==sx]
 
-		top15.dt <- subset(ysdeaths.dt, cause_id %in% cause.list)
+		top25.dt <- subset(ysdeaths.dt, cause_id %in% cause.list)
 		remain.dt <- subset(ysdeaths.dt, !(cause_id %in% cause.list), select=-c(cause_id, cause_name))
 		remain.dt[, cause_id:=999]
 		remain.dt[, cause_name:="All other causes"]
 		remain.dt <- remain.dt[, lapply(.SD, sum, na.rm=TRUE),
 			by = .(sex_id, sex, year_id, location_id, location_name, cause_id, cause_name), .SDcols="val"]
-		top15rem.dt <- rbind(top15.dt, remain.dt, fill=TRUE)
-		cod.dt <- rbind(cod.dt, top15rem.dt)
+		top25rem.dt <- rbind(top25.dt, remain.dt, fill=TRUE)
+		cod.dt <- rbind(cod.dt, top25rem.dt)
 	}
 }
 
-cause_list <- c("Congenital birth defects", "Neonatal preterm birth complications", "Neonatal encephalopathy due to birth asphyxia and trauma",
-	"Lower respiratory infections", "Other neonatal disorders", "Drowning", "Road injuries", "Exposure to mechanical forces", "Leukemia",
-	"Neonatal sepsis and other neonatal infections", "All other causes")
+cause_list <- c("Lower respiratory infections", "Neonatal preterm birth complications", "Congenital birth defects",
+	"Neonatal encephalopathy due to birth asphyxia and trauma", "Drowning", "Other neonatal disorders", "Road injuries",
+	"Exposure to mechanical forces", "Diarrheal diseases", "Neonatal sepsis and other neonatal infections",
+	"All other causes")
 
 cod.dt <- subset(cod.dt, cause_name %in% cause_list)
 
@@ -114,7 +115,7 @@ pal11 <- c("#1a8be9",
 "#cb9ce6",
 "#c8c8c8")
 
-## WRAPPING SBAR FOR 2016 BY SEX
+## WRAPPING SBAR FOR 1990 & 2016, BOTH SEXES
 # Set order of dataset so bars are in correct order
 cod$cause_name[cod$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy \n due to birth asphyxia \n and trauma"
 cod$cause_name[cod$cause_name == "Exposure to mechanical forces"] <- "Exposure to mechanical \n forces"
@@ -123,19 +124,19 @@ cod$cause_name[cod$cause_name == "Neonatal sepsis and other neonatal infections"
 cod$cause_name[cod$cause_name == "Other cardiovascular and circulatory diseases"] <- "Other cardiovascular and \n circulatory diseases"
 cod$cause_name[cod$cause_name == "Paralytic ileus and intestinal obstruction"] <- "Paralytic ileus and intestinal \n obstruction"
 
-index <- c("Congenital birth defects", "Neonatal preterm birth \n complications",
-	"Neonatal encephalopathy \n due to birth asphyxia \n and trauma", "Lower respiratory infections", "Other neonatal disorders",
-	"Drowning", "Road injuries", "Exposure to mechanical \n forces", "Leukemia", "Neonatal sepsis and \n other neonatal infections",
+index <- c("Lower respiratory infections", "Neonatal preterm birth \n complications", "Congenital birth defects",
+	"Neonatal encephalopathy \n due to birth asphyxia \n and trauma", "Drowning", "Other neonatal disorders", "Road injuries",
+	"Exposure to mechanical \n forces", "Diarrheal diseases", "Neonatal sepsis and \n other neonatal infections",
 	"All other causes")
 values <- c(1, 2, 3, 4, 5)
 cod$cause_order <- values[match(cod$cause_name, index)]
 
 cod <- cod[with(cod, order(desc(mr_sum), cause_order))]
 
-cod$cause_name <- factor(cod$cause_name, levels=c("Congenital birth defects", "Neonatal preterm birth \n complications",
-	"Neonatal encephalopathy \n due to birth asphyxia \n and trauma", "Lower respiratory infections", "Other neonatal disorders",
-	"Drowning", "Road injuries", "Exposure to mechanical \n forces", "Leukemia", "Neonatal sepsis and \n other neonatal infections",
-	"All other causes"))
+cod$cause_name <- factor(cod$cause_name, levels=c("Lower respiratory infections", "Neonatal preterm birth \n complications",
+	"Congenital birth defects", "Neonatal encephalopathy \n due to birth asphyxia \n and trauma", "Drowning",
+	"Other neonatal disorders", "Road injuries", "Exposure to mechanical \n forces", "Diarrheal diseases",
+	"Neonatal sepsis and \n other neonatal infections", "All other causes"))
 
 # Setting province order to be same as both sexes 2016
 cod_order <- cod[year_id==2016 & sex_id==3]
@@ -149,10 +150,10 @@ mf <- c("Males", "Females")
 cod_pord$location_name[cod_pord$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
 
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_2016.pdf",sep=""),width=14,height=8)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_9016.pdf",sep=""),width=14,height=8)
 
-cod_temp <- cod_pord[year_id==2016 & sex_id!=3]
-title=paste("Under-5 mortality by province for 2016", sep=" ")
+cod_temp <- cod_pord[(year_id==2016 | year_id==1990) & sex_id==3]
+title=paste("Under-5 mortality by province for both sexes", sep=" ")
 
 print(ggplot(data=cod_temp,
 	aes(reorder(location_name, mr_order), rate)) +
@@ -160,7 +161,7 @@ print(ggplot(data=cod_temp,
 		stat="identity",
 		position=position_fill(reverse=TRUE),
 		aes(fill=cause_name)) +
-	facet_wrap(~sex) +
+	facet_wrap(~year_id) +
 	scale_fill_manual(values=pal11) +
 	coord_flip() +
 	theme(plot.title=element_text(hjust=0.5),
