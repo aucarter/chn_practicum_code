@@ -98,9 +98,6 @@ data_aroc <- merge(provinces, waroc, by=c("id"), all.x=T)
 rbPal <- colorRampPalette(c("dark green", "yellow","red"))
 colors <- rbPal(5)
 
-# ## Set desired causes
-# causes <- unique(cod.mr$cause_name)
-
 ## Generate maps for year-by-year
 # Actually plot
 #pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5yy.pdf",sep=""),width=9.6,height=6.4)
@@ -135,14 +132,17 @@ colors <- rbPal(5)
 # dev.off()
 
 
-## Generate maps for AROC
+# ## Generate maps for AROC
+# ## Set desired causes
+# causes <- unique(cod.mr$cause_name)
+
 # # Actually plot
-# pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5aroc.pdf",sep=""),width=9.6,height=6.4)
+# pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5_aroc.pdf",sep=""),width=9.6,height=6.4)
 
 # # Looping through years and sexes
 # for(cause in causes) {
 #     for(sex in 1:3) {
-#         data_temp <- data_aroc[data_aroc$sex_id == sex,]
+#         data_temp <- data_aroc[data_aroc$sex_id == sex & !is.na(data_aroc$cause_name),]
 #         sex.name <- ifelse(sex==1, "Males", ifelse(sex==2, "Females", "Both"))
 #         ylim <- range(data_temp$aroc, na.rm=TRUE)
 #         # Order the variables to make sure the graphing doesn't get messed up
@@ -156,8 +156,7 @@ colors <- rbPal(5)
 #                 geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
 #                 scale_x_continuous("", breaks=NULL) + 
 #                 scale_y_continuous("", breaks=NULL) + 
-#                 coord_fixed(ratio=1) + 
-#                 facet_wrap(~cause_name) +
+#                 coord_fixed(ratio=1) +
 #                 guides(fill=guide_colourbar(title="Annualized percent \n change in \n mortality rate \n (per 100,000 \n live births)", barheight=10)) + 
 #                 theme_bw(base_size=10) + 
 #                 theme(plot.title=element_text(hjust=0.5)) +
@@ -166,35 +165,36 @@ colors <- rbPal(5)
 # }
 # dev.off()
 
+
+## Generate facet-wrapped maps for AROC
+# Line break for long cause name
+data_aroc$cause_name[data_aroc$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy due to \n birth asphyxia and trauma"
+
 ## Set desired causes
-causes <- unique(waroc$cause_name)
+causes <- unique(data_aroc$cause_name)
 
-# Actually plot FOR BOTH SEXES, facet wrapped
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5aroc.pdf",sep=""),width=9.6,height=6.4)
+# Actually plot for both sexes
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5_aroc_bs9016.pdf",sep=""),width=9.6,height=6.4)
 
-# Looping through years and sexes
-#for(cause in causes) {
-    #for(sex in 1:3) {
-        data_temp <- data_aroc[data_aroc$sex_id == 3,]
-        sex.name <- ifelse(sex==1, "Males", ifelse(sex==2, "Females", "Both"))
-        ylim <- range(data_temp$aroc, na.rm=TRUE)
-        # Order the variables to make sure the graphing doesn't get messed up
-        data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
-        title = paste("Annualized percent change in mortality due to", cause, "from 1990-2016 for Children Under 5,", 
-                      sex.name, sep=" ")
-        
-        print(ggplot(data_temp) +
-                geom_polygon(aes(x=long, y=lat, group=group, fill=aroc)) +
-                scale_fill_gradientn(colours=colors, limits=ylim)  + 
-                geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
-                scale_x_continuous("", breaks=NULL) + 
-                scale_y_continuous("", breaks=NULL) + 
-                coord_fixed(ratio=1) + 
-                facet_wrap(~cause_name, ncol=2, nrow=3) +
-                guides(fill=guide_colourbar(title="Annualized percent \n change in \n mortality rate \n (per 100,000 \n live births)", barheight=10)) + 
-                theme_bw(base_size=10) + 
-                theme(plot.title=element_text(hjust=0.5)) +
-                labs(title=str_wrap(paste(title, sep=""), width=85)))
-    #}
-#}
+data_temp <- data_aroc[data_aroc$sex_id == 3 & !is.na(data_aroc$cause_name),]
+ylim <- range(data_temp$aroc, na.rm=TRUE)
+# Order the variables to make sure the graphing doesn't get messed up
+data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
+title = paste("Annualized percent change in mortality from 1990-2016 \n for Children Under 5, both sexes", sep=" ")
+
+print(ggplot(data_temp) +
+        geom_polygon(aes(x=long, y=lat, group=group, fill=aroc)) +
+        scale_fill_gradientn(colours=colors, limits=ylim)  + 
+        geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
+        scale_x_continuous("", breaks=NULL) + 
+        scale_y_continuous("", breaks=NULL) + 
+        coord_fixed(ratio=1) + 
+        facet_wrap(~cause_name) +
+        guides(fill=guide_colourbar(title="Annualized percent change \n in mortality rate \n (per 100,000 live births)",
+            barheight=1.75, barwidth=18)) + 
+        theme_bw(base_size=10) + 
+        theme(plot.title=element_text(hjust=0.5),
+            legend.position="bottom") +
+        labs(title=str_wrap(paste(title, sep=""), width=100)))
+
 dev.off()
