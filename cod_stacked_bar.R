@@ -11,8 +11,8 @@ library(lattice)
 library(latticeExtra)
 library(RColorBrewer)
 library(Rcpp)
-#library("Rcpp", lib.loc="/snfs2/HOME/eeldren/R/x86_64-unknown-linux-gnu-library/3.1")
 library(ggplot2)
+library(gridExtra)
 library(plyr)
 library(maptools)
 library(RMySQL)
@@ -114,63 +114,28 @@ pal11 <- c("#1a8be9",
 "#cb9ce6",
 "#c8c8c8")
 
-# # Actually plot
-# pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10.pdf",sep=""),width=12,height=8)
-
-# for(year in years){
-# 	for(sx in sexes) {
-# 		# Set order of dataset so bars are in correct order
-# 		yscod <- cod[year_id==year & sex==sx]
-# 		mlcauses <- dtemp10.dt[year_id==year & sex==sx]
-# 		setorder(mlcauses, -val)
-# 		mlcname <- subset(mlcauses, select=cause_name)
-# 		mlcname[, values:=1:10]
-# 		yscod$cause_order <- mlcname$values[match(yscod$cause_name, mlcname$cause_name)]
-
-# 		yscod <- yscod[with(yscod, order(desc(mr_sum), cause_order))]
-# 		ysorder <- setorder(yscod, location_id, cause_order, na.last=TRUE)
-# 		ysorder$cause_name <- factor(ysorder$cause_name)
-# 		ysorder$cause_name <- reorder(ysorder$cause_name, ysorder$cause_order)
-
-# 		ysorder$location_name[yscod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
-
-
-# 		title=paste("Under-5 mortality by province for", year, ",", sx, sep=" ")
-
-# 		print(ggplot(data=ysorder,
-# 			aes(reorder(location_name, mr_sum), rate)) +
-# 			geom_bar(width=0.85,
-# 				stat="identity",
-# 				position=position_fill(reverse=TRUE),
-# 				aes(fill=cause_name)) +
-# 			scale_fill_manual(values=pal11) +
-# 			coord_flip() +
-# 			theme(plot.title=element_text(hjust=0.5)) +
-# 			labs(title=paste(title, sep=""),
-# 				y="Proportion of total mortality burden due to cause",
-# 				x="Province (in order of all-cause mortality rate, high to low)",
-# 				fill="Cause of death"))
-# 	}
-# }
-
-# dev.off()
-
-
 ## WRAPPING SBAR FOR 2016 BY SEX
 # Set order of dataset so bars are in correct order
-index <- c("Congenital birth defects", "Neonatal preterm birth complications", "Neonatal encephalopathy due to birth asphyxia and trauma",
-	"Lower respiratory infections", "Other neonatal disorders", "Drowning", "Road injuries", "Exposure to mechanical forces", "Leukemia",
-	"Neonatal sepsis and other neonatal infections", "All other causes")
+cod$cause_name[cod$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy \n due to birth asphyxia \n and trauma"
+cod$cause_name[cod$cause_name == "Exposure to mechanical forces"] <- "Exposure to mechanical \n forces"
+cod$cause_name[cod$cause_name == "Neonatal preterm birth complications"] <- "Neonatal preterm birth \n complications"
+cod$cause_name[cod$cause_name == "Neonatal sepsis and other neonatal infections"] <- "Neonatal sepsis and \n other neonatal infections"
+cod$cause_name[cod$cause_name == "Other cardiovascular and circulatory diseases"] <- "Other cardiovascular and \n circulatory diseases"
+cod$cause_name[cod$cause_name == "Paralytic ileus and intestinal obstruction"] <- "Paralytic ileus and intestinal \n obstruction"
+
+index <- c("Congenital birth defects", "Neonatal preterm birth \n complications",
+	"Neonatal encephalopathy \n due to birth asphyxia \n and trauma", "Lower respiratory infections", "Other neonatal disorders",
+	"Drowning", "Road injuries", "Exposure to mechanical \n forces", "Leukemia", "Neonatal sepsis and \n other neonatal infections",
+	"All other causes")
 values <- c(1, 2, 3, 4, 5)
 cod$cause_order <- values[match(cod$cause_name, index)]
 
 cod <- cod[with(cod, order(desc(mr_sum), cause_order))]
-cod$cause_name <- factor(cod$cause_name, levels=c("Congenital birth defects", "Neonatal preterm birth complications",
-	"Neonatal encephalopathy due to birth asphyxia and trauma", "Lower respiratory infections", "Other neonatal disorders", "Drowning",
-	"Road injuries", "Exposure to mechanical forces", "Leukemia", "Neonatal sepsis and other neonatal infections", "All other causes"))
 
-# Making mainland China name shorter to fit in figure
-cod$location_name[cod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
+cod$cause_name <- factor(cod$cause_name, levels=c("Congenital birth defects", "Neonatal preterm birth \n complications",
+	"Neonatal encephalopathy \n due to birth asphyxia \n and trauma", "Lower respiratory infections", "Other neonatal disorders",
+	"Drowning", "Road injuries", "Exposure to mechanical \n forces", "Leukemia", "Neonatal sepsis and \n other neonatal infections",
+	"All other causes"))
 
 # Setting province order to be same as both sexes 2016
 cod_order <- cod[year_id==2016 & sex_id==3]
@@ -180,28 +145,30 @@ cod_pord <- cod[cod_order, on="location_name"]
 
 mf <- c("Males", "Females")
 
+# Shortening China mainland name
+cod_pord$location_name[cod_pord$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
+
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_2016.pdf",sep=""),width=18,height=8)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_2016.pdf",sep=""),width=14,height=8)
 
-#for(sx in mf) {
-	#cod_temp <- cod_pord[year_id==2016 & sex==sx]
-	cod_temp <- cod_pord[year_id==2016 & sex_id!=3]
-	title=paste("Under-5 mortality by province for", year, ",", sx, sep=" ")
+cod_temp <- cod_pord[year_id==2016 & sex_id!=3]
+title=paste("Under-5 mortality by province for 2016", sep=" ")
 
-	print(ggplot(data=cod_temp,
-		aes(reorder(location_name, mr_order), rate)) +
-		geom_bar(width=0.85,
-			stat="identity",
-			position=position_fill(reverse=TRUE),
-			aes(fill=cause_name)) +
-		facet_wrap(~sex) +
-		scale_fill_manual(values=pal11) +
-		coord_flip() +
-		theme(plot.title=element_text(hjust=0.5)) +
-		labs(title=paste(title, sep=""),
-			y="Proportion of total mortality burden due to cause",
-			x="Province (in order of all-cause mortality rate, high to low)",
-			fill="Cause of death"))
-#}
+print(ggplot(data=cod_temp,
+	aes(reorder(location_name, mr_order), rate)) +
+	geom_bar(width=0.85,
+		stat="identity",
+		position=position_fill(reverse=TRUE),
+		aes(fill=cause_name)) +
+	facet_wrap(~sex) +
+	scale_fill_manual(values=pal11) +
+	coord_flip() +
+	theme(plot.title=element_text(hjust=0.5),
+		legend.position="bottom",
+		legend.direction="horizontal") +
+	labs(title=paste(title, sep=""),
+		y="Proportion of total mortality burden due to cause",
+		x="Province (in order of all-cause mortality rate, high to low)",
+		fill="Cause of death"))
 
 dev.off()
