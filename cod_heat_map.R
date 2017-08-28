@@ -51,7 +51,7 @@ mort.dt[sex=="Both", sex:="Both sexes"]
 mainland.dt <- copy(mort.dt)
 mainland.dt <- mainland.dt[, lapply(.SD, sum), by = .(year_id, sex_id, sex, cause_id, cause_name), .SDcols = "val"]
 mainland.dt[, location_id:=44533]
-mainland.dt[, location_name:="China (without Hong Kong and Macao)"]
+mainland.dt[, location_name:="Mainland China"]
 deaths.dt <- rbind(mort.dt[, .(location_id, location_name, year_id, sex_id, sex, cause_id, cause_name, val)], mainland.dt)
 
 ## Get top 15 causes for each year/sex combo
@@ -96,7 +96,7 @@ rcod[, mr_sum := sum(rate), by=c("location_id", "year_id", "sex_id")]
 sexes <- unique(rcod$sex)
 
 # Shortening names
-rcod$location_name[rcod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
+#rcod$location_name[rcod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
 rcod$cause_name[rcod$cause_name == "Hemolytic disease and other neonatal jaundice"] <- "Hemolytic disease and \n other neonatal jaundice"
 rcod$cause_name[rcod$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy \n due to birth asphyxia \n and trauma"
 rcod$cause_name[rcod$cause_name == "Exposure to mechanical forces"] <- "Exposure to mechanical \n forces"
@@ -113,10 +113,11 @@ for(year in years) {
 		yscod <- rcod[year_id==year & sex==sx]
 		title=paste("Top 15 under-5 causes of death by province (mortality rate per 100,000 live births) for", year, ",", sx, sep=" ")
 
-		print(ggplot(yscod, aes(reorder(location_name, -mr_sum), reorder(cause_name, rate))) +
+		#print(ggplot(yscod, aes(reorder(location_name, -mr_sum), reorder(cause_name, rate))) +
+		print(ggplot(yscod, aes(reorder(location_name, -mr_sum), cause_name)) +
 			geom_tile(aes(fill=-values)) +
 			geom_text(aes(label=round(rate, 0))) +
-			scale_fill_gradient(low="white", high="red", guide=FALSE) +
+			scale_fill_gradientn(colours=rev(brewer.pal(15,"RdYlGn"))) +
 			labs(title=paste(title, sep=""),
 				x="Province (in order of all-cause mortality rate, high to low)",
 				y="Cause name") +
@@ -145,3 +146,13 @@ print(ggplot(test, aes(reorder(location_name, mr_sum), reorder(cause_name, -rate
 	theme(axis.text.x.top=element_text(angle=45, vjust=0, hjust=0)) +
 	scale_y_discrete(position="top"))
 dev.off()
+
+
+
+## Heat map relative to China mainland
+# Generate variable indicating whether rate is higher or lower than China mainland
+#cod.mr[, mainland:=rate[location_id==44533], by=c("cause_id", "year_id", "sex_id")]
+#cod.mr[, rate_sd:=sd(rate, na.rm=FALSE), by=c("cause_id", "year_id", "sex_id")]
+
+# Greater than mainland = 3, close to = 2, less than = 1
+#cod.mr$mainland_tf <- ifelse(cod.mr$rate>cod.mr$mainland, )
