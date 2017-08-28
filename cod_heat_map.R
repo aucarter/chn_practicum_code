@@ -11,7 +11,6 @@ library(lattice)
 library(latticeExtra)
 library(RColorBrewer)
 library(Rcpp)
-#library("Rcpp", lib.loc="/snfs2/HOME/eeldren/R/x86_64-unknown-linux-gnu-library/3.1")
 library(ggplot2)
 library(plyr)
 library(maptools)
@@ -119,8 +118,6 @@ pdf(paste0(root, "temp/", user, "/mchs/china_cod_hmap_top15.pdf",sep=""),width=1
 
 for(year in years) {
 	for(sx in sexes) {
-		#yscod <- rcod[year_id==year & sex==sx]
-
 		yscod <- rcod[year_id==year & sex==sx]
 		mlcauses <- dtemp15.dt[year_id==year & sex==sx]
 		setorder(mlcauses, -val)
@@ -135,7 +132,6 @@ for(year in years) {
 
 		title=paste("Top 15 under-5 causes of death by province (mortality rate per 100,000 live births) for", year, ",", sx, sep=" ")
 
-		#print(ggplot(yscod, aes(reorder(location_name, -mr_sum), reorder(cause_name, rate))) +
 		print(ggplot(ysorder, aes(reorder(location_name, -mr_sum), reorder(cause_name, -cause_order))) +
 			geom_tile(aes(fill=-values)) +
 			geom_text(aes(label=round(rate, 0))) +
