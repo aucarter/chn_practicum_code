@@ -6,7 +6,6 @@
 ## Bring in libraries
 rm(list=ls())
 library(foreign)
-library(plyr)
 library(data.table)
 library(lattice)
 library(latticeExtra)
@@ -14,6 +13,7 @@ library(RColorBrewer)
 library(Rcpp)
 #library("Rcpp", lib.loc="/snfs2/HOME/eeldren/R/x86_64-unknown-linux-gnu-library/3.1")
 library(ggplot2)
+library(plyr)
 library(maptools)
 library(RMySQL)
 
@@ -58,6 +58,16 @@ deaths.dt <- rbind(mort.dt[, .(location_id, location_name, year_id, sex_id, sex,
 # Keep top 15 causes for mainland China for each year/sex combo
 dtemp.dt <- deaths.dt[location_id==44533]
 dtemp15.dt <- dtemp.dt[order(year_id, sex_id, -val), .SD[1:15], by=c("year_id", "sex_id")]
+
+# Shortening names
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Hemolytic disease and other neonatal jaundice"] <- "Hemolytic disease and \n other neonatal jaundice"
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy \n due to birth asphyxia \n and trauma"
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Exposure to mechanical forces"] <- "Exposure to mechanical \n forces"
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Neonatal preterm birth complications"] <- "Neonatal preterm birth \n complications"
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Neonatal sepsis and other neonatal infections"] <- "Neonatal sepsis and \n other neonatal infections"
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Other cardiovascular and circulatory diseases"] <- "Other cardiovascular and \n circulatory diseases"
+dtemp15.dt$cause_name[dtemp15.dt$cause_name == "Paralytic ileus and intestinal obstruction"] <- "Paralytic ileus and intestinal \n obstruction"
+
 sexes <- unique(dtemp15.dt$sex_id)
 
 # Keep top 15 causes (according to mainland China rates) for each province
@@ -96,7 +106,6 @@ rcod[, mr_sum := sum(rate), by=c("location_id", "year_id", "sex_id")]
 sexes <- unique(rcod$sex)
 
 # Shortening names
-#rcod$location_name[rcod$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
 rcod$cause_name[rcod$cause_name == "Hemolytic disease and other neonatal jaundice"] <- "Hemolytic disease and \n other neonatal jaundice"
 rcod$cause_name[rcod$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy \n due to birth asphyxia \n and trauma"
 rcod$cause_name[rcod$cause_name == "Exposure to mechanical forces"] <- "Exposure to mechanical \n forces"
@@ -110,11 +119,24 @@ pdf(paste0(root, "temp/", user, "/mchs/china_cod_hmap_top15.pdf",sep=""),width=1
 
 for(year in years) {
 	for(sx in sexes) {
+		#yscod <- rcod[year_id==year & sex==sx]
+
 		yscod <- rcod[year_id==year & sex==sx]
+		mlcauses <- dtemp15.dt[year_id==year & sex==sx]
+		setorder(mlcauses, -val)
+		mlcname <- subset(mlcauses, select=cause_name)
+		mlcname[, values:=1:15]
+		yscod$cause_order <- mlcname$values[match(yscod$cause_name, mlcname$cause_name)]
+
+		yscod <- yscod[with(yscod, order(desc(mr_sum), cause_order))]
+		ysorder <- setorder(yscod, location_id, cause_order, na.last=TRUE)
+		ysorder$cause_name <- factor(ysorder$cause_name)
+		ysorder$cause_name <- reorder(ysorder$cause_name, ysorder$cause_order)
+
 		title=paste("Top 15 under-5 causes of death by province (mortality rate per 100,000 live births) for", year, ",", sx, sep=" ")
 
 		#print(ggplot(yscod, aes(reorder(location_name, -mr_sum), reorder(cause_name, rate))) +
-		print(ggplot(yscod, aes(reorder(location_name, -mr_sum), cause_name)) +
+		print(ggplot(ysorder, aes(reorder(location_name, -mr_sum), reorder(cause_name, -cause_order))) +
 			geom_tile(aes(fill=-values)) +
 			geom_text(aes(label=round(rate, 0))) +
 			scale_fill_gradientn(colours=rev(brewer.pal(15,"RdYlGn"))) +
@@ -129,30 +151,3 @@ for(year in years) {
 }
 
 dev.off()
-
-
-
-### TEST MAP WITH ONLY ONE SEX-YEAR
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_hmap_top15_TEST.pdf",sep=""),width=12,height=8)
-test <- rcod[year_id==1990&sex_id==1]
-print(ggplot(test, aes(reorder(location_name, mr_sum), reorder(cause_name, -rate))) +
-	geom_tile(aes(fill=-values)) +
-	geom_text(aes(label=round(rate, 0))) +
-	scale_fill_gradient(low="white", high="red") +
-	labs(title="Top 15 under-5 causes of death by province (mortality rate per 100,000 live births)",
-		x="Province (in order of all-cause mortality rate, high to low)",
-		y="Cause name") +
-	coord_flip() +
-	theme(axis.text.x.top=element_text(angle=45, vjust=0, hjust=0)) +
-	scale_y_discrete(position="top"))
-dev.off()
-
-
-
-## Heat map relative to China mainland
-# Generate variable indicating whether rate is higher or lower than China mainland
-#cod.mr[, mainland:=rate[location_id==44533], by=c("cause_id", "year_id", "sex_id")]
-#cod.mr[, rate_sd:=sd(rate, na.rm=FALSE), by=c("cause_id", "year_id", "sex_id")]
-
-# Greater than mainland = 3, close to = 2, less than = 1
-#cod.mr$mainland_tf <- ifelse(cod.mr$rate>cod.mr$mainland, )
