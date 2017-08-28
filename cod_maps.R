@@ -86,7 +86,7 @@ laroc <- cod.mr[year_id==1990|year_id==2016]
 waroc <- dcast(laroc, id + location_name + sex_id + sex + cause_id + cause_name + ihme_loc_id + iso3 ~ year_id, value.var="rate")
 setnames(waroc, "1990", "year_1990")
 setnames(waroc, "2016", "year_2016")
-waroc[, aroc:=(((waroc$year_2016/waroc$year_1990)^(1/26))-1)*100]
+waroc[, aroc:=(log(waroc$year_2016/waroc$year_1990)/(26))*100]
 
 ## Merge onto shapefile
 data_yy <- merge(provinces, cod.mr, by=c("id"), all.x=T)
@@ -98,34 +98,37 @@ data_aroc <- merge(provinces, waroc, by=c("id"), all.x=T)
 rbPal <- colorRampPalette(c("dark green", "yellow","red"))
 colors <- rbPal(5)
 
+## Set desired causes
+causes <- unique(cod.mr$cause_name)
+
 ## Generate maps for year-by-year
 # Actually plot
-#pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5yy.pdf",sep=""),width=9.6,height=6.4)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5yy.pdf",sep=""),width=9.6,height=6.4)
 
 # Looping through years and sexes
 # for(cause in causes) {
 #     for(year in years) {
 #         for(sex in 1:3) {
-#             data_temp <- data_yy[data_yy$sex_id==sex & data_yy$year_id==year,]
+#             data_temp <- data_yy[data_yy$sex_id==sex & data_yy$year_id==year & data_yy$cause_name==cause,]
 #             sex.name <- ifelse(sex==1, "Males", ifelse(sex==2, "Females", "Both"))
 #             ylim <- range(data_temp$rate, na.rm=TRUE)
+
 #             # Order the variables to make sure the graphing doesn't get messed up
 #             data_temp <- data_temp[order(data_temp$id, data_temp$group, data_temp$piece, data_temp$order),]    
 #             title = paste("Mortality due to", cause, "in", year, "for Children Under 5,", 
 #                           sex.name, sep=" ")
-#             #ltitle = paste("Mortality rate \n (per 100,000 live births")
             
 #             print(ggplot(data_temp) +
-#                     geom_polygon(aes(x=long, y=lat, group=group, fill=rate)) +
-#                     scale_fill_gradientn(colours=colors, limits=ylim)  + 
-#                     geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
-#                     scale_x_continuous("", breaks=NULL) + 
-#                     scale_y_continuous("", breaks=NULL) + 
-#                     coord_fixed(ratio=1) + 
-#                     guides(fill=guide_colourbar(title="Mortality rate \n (per 100,000 \n live births)", barheight=10)) + 
-#                     theme_bw(base_size=10) +
-                        # theme(plot.title=element_text(hjust=0.5)) +  
-#                     labs(title=str_wrap(paste(title, sep=""), width=85)))  
+#                 geom_polygon(aes(x=long, y=lat, group=group, fill=rate)) +
+#                 scale_fill_gradientn(colours=colors, limits=ylim)  + 
+#                 geom_path(data=provinces, aes(x=long, y=lat, group=group)) + 
+#                 scale_x_continuous("", breaks=NULL) + 
+#                 scale_y_continuous("", breaks=NULL) + 
+#                 coord_fixed(ratio=1) + 
+#                 guides(fill=guide_colourbar(title="Mortality rate \n (per 100,000 \n live births)", barheight=10)) + 
+#                 theme_bw(base_size=10) +
+#                     theme(plot.title=element_text(hjust=0.5)) +  
+#                 labs(title=str_wrap(paste(title, sep=""), width=85)))  
 #         }
 #     }
 # }
@@ -142,7 +145,7 @@ colors <- rbPal(5)
 # # Looping through years and sexes
 # for(cause in causes) {
 #     for(sex in 1:3) {
-#         data_temp <- data_aroc[data_aroc$sex_id == sex & !is.na(data_aroc$cause_name),]
+#         data_temp <- data_aroc[data_aroc$sex_id == sex & data_aroc$cause_name==cause & !is.na(data_aroc$cause_name),]
 #         sex.name <- ifelse(sex==1, "Males", ifelse(sex==2, "Females", "Both"))
 #         ylim <- range(data_temp$aroc, na.rm=TRUE)
 #         # Order the variables to make sure the graphing doesn't get messed up
@@ -166,7 +169,7 @@ colors <- rbPal(5)
 # dev.off()
 
 
-## Generate facet-wrapped maps for AROC
+# Generate facet-wrapped maps for AROC
 # Line break for long cause name
 data_aroc$cause_name[data_aroc$cause_name == "Neonatal encephalopathy due to birth asphyxia and trauma"] <- "Neonatal encephalopathy due to \n birth asphyxia and trauma"
 
@@ -174,7 +177,7 @@ data_aroc$cause_name[data_aroc$cause_name == "Neonatal encephalopathy due to bir
 causes <- unique(data_aroc$cause_name)
 
 # Actually plot for both sexes
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5_aroc_bs9016.pdf",sep=""),width=9.6,height=6.4)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5_aroc_bs.pdf",sep=""),width=9.6,height=6.4)
 
 data_temp <- data_aroc[data_aroc$sex_id == 3 & !is.na(data_aroc$cause_name),]
 ylim <- range(data_temp$aroc, na.rm=TRUE)
