@@ -51,36 +51,31 @@ mort.dt[sex=="Both", sex:="Both sexes"]
 mainland.dt <- copy(mort.dt)
 mainland.dt <- mainland.dt[, lapply(.SD, sum), by = .(year_id, sex_id, sex, cause_id, cause_name), .SDcols = "val"]
 mainland.dt[, location_id:=44533]
-mainland.dt[, location_name:="China (without Hong Kong and Macao)"]
+mainland.dt[, location_name:="Mainland China"]
 deaths.dt <- rbind(mort.dt[, .(location_id, location_name, year_id, sex_id, sex, cause_id, cause_name, val)], mainland.dt)
 
-## Get top 20 causes and "all other causes" for each year/sex combo
-# Keep top 20 causes for mainland China for each year/sex combo
-dtemp.dt <- deaths.dt[location_id==44533]
-dtemp25.dt <- dtemp.dt[order(year_id, sex_id, -val), .SD[1:25], by=c("year_id", "sex_id")]
-sexes <- unique(dtemp25.dt$sex_id)
-cod.dt <- NULL
-
-for(year in years){
-	for(sx in sexes) {
-		cause.list <- dtemp25.dt[year_id==year & sex_id==sx, cause_id]
-		ysdeaths.dt <- deaths.dt[year_id==year & sex_id==sx]
-
-		top25.dt <- subset(ysdeaths.dt, cause_id %in% cause.list)
-		remain.dt <- subset(ysdeaths.dt, !(cause_id %in% cause.list), select=-c(cause_id, cause_name))
-		remain.dt[, cause_id:=999]
-		remain.dt[, cause_name:="All other causes"]
-		remain.dt <- remain.dt[, lapply(.SD, sum, na.rm=TRUE),
-			by = .(sex_id, sex, year_id, location_id, location_name, cause_id, cause_name), .SDcols="val"]
-		top25rem.dt <- rbind(top25.dt, remain.dt, fill=TRUE)
-		cod.dt <- rbind(cod.dt, top25rem.dt)
-	}
-}
-
+## Get top 10 causes and "all other causes"
 cause_list <- c("Lower respiratory infections", "Neonatal preterm birth complications", "Congenital birth defects",
 	"Neonatal encephalopathy due to birth asphyxia and trauma", "Drowning", "Other neonatal disorders", "Road injuries",
 	"Exposure to mechanical forces", "Diarrheal diseases", "Neonatal sepsis and other neonatal infections",
 	"All other causes")
+sexes <- unique(deaths.dt$sex_id)
+cod.dt <- NULL
+
+for(year in years){
+	for(sx in sexes) {
+		ysdeaths.dt <- deaths.dt[year_id==year & sex_id==sx]
+
+		top10.dt <- subset(ysdeaths.dt, cause_name %in% cause_list)
+		remain.dt <- subset(ysdeaths.dt, !(cause_name %in% cause_list), select=-c(cause_id, cause_name))
+		remain.dt[, cause_id:=999]
+		remain.dt[, cause_name:="All other causes"]
+		remain.dt <- remain.dt[, lapply(.SD, sum, na.rm=TRUE),
+			by = .(sex_id, sex, year_id, location_id, location_name, cause_id, cause_name), .SDcols="val"]
+		top10rem.dt <- rbind(top10.dt, remain.dt, fill=TRUE)
+		cod.dt <- rbind(cod.dt, top10rem.dt)
+	}
+}
 
 cod.dt <- subset(cod.dt, cause_name %in% cause_list)
 
@@ -92,6 +87,17 @@ lbirths.dt <- subset(lbirths.dt, select=c(sex_id, location_id, year_id, mean_val
 setnames(lbirths.dt, "mean_value", "live_births")
 cod.mr <- merge(lbirths.dt, cod.dt, by=c("location_id", "year_id", "sex_id"))
 cod.mr[, rate:=(val/live_births)*100000]
+
+## Generating underlying dataset
+sbar_data <- copy(cod.mr)
+sbar_data <- subset(sbar_data, select=c(year_id, location_name, sex, cause_name, rate))
+setnames(sbar_data, "year_id", "Year")
+setnames(sbar_data, "location_name", "Location name")
+setnames(sbar_data, "sex", "Sex")
+setnames(sbar_data, "cause_name", "Cause name")
+setnames(sbar_data, "rate", "Rate")
+
+write.csv(sbar_data, paste0(root, "temp/", user, "/mchs/china_cod_sbar_dataset.csv",sep=""), row.names=FALSE)
 
 
 ## GRAPHING #########################################################
@@ -144,15 +150,12 @@ cod_order[, mr_order:=.GRP, by=location_name]
 cod_order <- subset(cod_order[, head(.SD, 1), by=location_name], select=c(location_name, mr_order))
 cod_pord <- cod[cod_order, on="location_name"]
 
-mf <- c("Males", "Females")
-
-# Shortening China mainland name
-cod_pord$location_name[cod_pord$location_name == "China (without Hong Kong and Macao)"] <- "China without \n Hong Kong and Macao"
-
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_9016.pdf",sep=""),width=14,height=8)
+pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_bs9016.pdf",sep=""),width=14,height=8)
+#pdf(paste0(root, "temp/", user, "/mchs/china_cod_sbar_top10_mf16.pdf",sep=""),width=14,height=8)
 
 cod_temp <- cod_pord[(year_id==2016 | year_id==1990) & sex_id==3]
+#cod_temp <- cod_pord[year_id==2016 & sex_id != 3]
 title=paste("Under-5 mortality by province for both sexes", sep=" ")
 
 print(ggplot(data=cod_temp,
@@ -161,6 +164,7 @@ print(ggplot(data=cod_temp,
 		stat="identity",
 		position=position_fill(reverse=TRUE),
 		aes(fill=cause_name)) +
+	#facet_wrap(~sex) +
 	facet_wrap(~year_id) +
 	scale_fill_manual(values=pal11) +
 	coord_flip() +
