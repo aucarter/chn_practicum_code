@@ -90,6 +90,17 @@ setnames(lbirths.dt, "mean_value", "live_births")
 cod.mr <- merge(lbirths.dt, cod.dt, by=c("location_id", "year_id", "sex_id"))
 cod.mr[, rate:=(val/live_births)*100000]
 
+## Generate underlying dataset
+hmap_data <- copy(cod.mr)
+hmap_data <- subset(hmap_data, select=c(year_id, location_name, sex, cause_name, rate))
+setnames(hmap_data, "year_id", "Year")
+setnames(hmap_data, "location_name", "Location name")
+setnames(hmap_data, "sex", "Sex")
+setnames(hmap_data, "cause_name", "Cause name")
+setnames(hmap_data, "rate", "Rate")
+
+write.csv(hmap_data, paste0(root, "temp/", user, "/mchs/china_cod_hmap_dataset.csv",sep=""), row.names=FALSE)
+
 
 ## GRAPHING #########################################################
 ## Convential heat map
