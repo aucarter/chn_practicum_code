@@ -88,6 +88,30 @@ setnames(waroc, "1990", "year_1990")
 setnames(waroc, "2016", "year_2016")
 waroc[, aroc:=(log(waroc$year_2016/waroc$year_1990)/(26))*100]
 
+## Generate underlying datasets
+# Rate dataset
+rates_data <- copy(cod.mr)
+rates_data <- subset(rates_data, select=c(location_name, year_id, cause_name, sex, rate))
+setnames(rates_data, "location_name", "Location name")
+setnames(rates_data, "year_id", "Year")
+setnames(rates_data, "cause_name", "Cause name")
+setnames(rates_data, "sex", "Sex")
+setnames(rates_data, "rate", "Rate")
+
+write.csv(rates_data, paste0(root, "temp/", user, "/mchs/china_cod_map_rates_dataset.csv",sep=""), row.names=FALSE)
+
+# AROC dataset
+aroc_data <- copy(waroc)
+aroc_data <- subset(aroc_data, select=c(location_name, sex, cause_name, year_1990, year_2016, aroc))
+setnames(aroc_data, "location_name", "Location name")
+setnames(aroc_data, "sex", "Sex")
+setnames(aroc_data, "cause_name", "Cause name")
+setnames(aroc_data, "year_1990", "1990 rate")
+setnames(aroc_data, "year_2016", "2016 rate")
+setnames(aroc_data, "aroc", "Annualized rate of change, 1990-2016")
+
+write.csv(aroc_data, paste0(root, "temp/", user, "/mchs/china_cod_map_aroc_dataset.csv",sep=""), row.names=FALSE)
+
 ## Merge onto shapefile
 data_yy <- merge(provinces, cod.mr, by=c("id"), all.x=T)
 data_aroc <- merge(provinces, waroc, by=c("id"), all.x=T)
@@ -103,7 +127,7 @@ causes <- unique(cod.mr$cause_name)
 
 ## Generate maps for year-by-year
 # Actually plot
-pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5yy.pdf",sep=""),width=9.6,height=6.4)
+#pdf(paste0(root, "temp/", user, "/mchs/china_cod_maps_actop5_years.pdf",sep=""),width=9.6,height=6.4)
 
 # Looping through years and sexes
 # for(cause in causes) {
